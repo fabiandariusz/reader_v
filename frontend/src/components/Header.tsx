@@ -12,6 +12,12 @@ export default function Header() {
         >
           Library
         </NavLink>
+        <NavLink
+          to="/settings"
+          className={({ isActive }) => `header__nav-link${isActive ? ' active' : ''}`}
+        >
+          Settings
+        </NavLink>
       </nav>
     </header>
   );

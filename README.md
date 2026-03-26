@@ -17,6 +17,9 @@ An educational video learning app with timestamped note-taking. Watch videos and
 | Database schema (PostgreSQL) | Done |
 | Redis caching layer | Done |
 | Auth | Not required (local app) |
+| AI provider abstraction (Claude + Ollama) | Done |
+| AI features — summary, concepts, quiz, chat | Done |
+| Settings page (AI config UI) | Done |
 
 ---
 
@@ -26,6 +29,7 @@ An educational video learning app with timestamped note-taking. Watch videos and
 - **Backend** — Node.js, Express, TypeScript, ts-node-dev
 - **Database** — PostgreSQL (primary), Redis (cache)
 - **Styling** — Custom CSS system, black/white theme
+- **AI** — Claude API (`@anthropic-ai/sdk`) or Ollama (local LLM), user-configurable
 
 ---
 
@@ -35,20 +39,21 @@ An educational video learning app with timestamped note-taking. Watch videos and
 reader_v/
 ├── frontend/
 │   └── src/
-│       ├── api/            # Axios API wrappers (videos, notes, tags)
-│       ├── components/     # VideoCard, VideoPlayer, NotePanel, NoteItem,
-│       │                   # NoteComposer, AddVideoModal, Header
-│       ├── hooks/          # useVideos, useNotes, useTags
-│       ├── pages/          # LibraryPage, PlayerPage
+│       ├── api/            # Axios wrappers (videos, notes, tags, settings, ai)
+│       ├── components/     # VideoCard, VideoPlayer, NoteItem, NoteComposer,
+│       │                   # AIPanel, AIChat, AddVideoModal, Header
+│       ├── hooks/          # useVideos, useNotes, useTags, useSettings, useAIStream
+│       ├── pages/          # LibraryPage, PlayerPage, SettingsPage
 │       ├── styles/         # variables, reset, base, layout, components CSS
 │       ├── types/          # Shared TypeScript interfaces
 │       └── utils/          # Time formatting helpers
 └── backend/
     └── src/
-        ├── controllers/    # videoController, noteController, tagController
+        ├── ai/             # types, claude.ts, ollama.ts, factory.ts, prompts.ts
+        ├── controllers/    # video, note, tag, settings, ai controllers
         ├── db/             # pool.ts (pg), redis.ts, schema.sql, init.ts
         ├── middleware/     # errorHandler, notFound
-        └── routes/         # /api/videos, /api/notes, /api/tags
+        └── routes/         # /api/videos, /api/notes, /api/tags, /api/settings, /api/ai
 ```
 
 ---
@@ -72,6 +77,15 @@ reader_v/
 | GET | `/api/tags` | List all tags |
 | POST | `/api/tags` | Create tag |
 | DELETE | `/api/tags/:id` | Delete tag |
+| GET | `/api/settings` | Get AI settings (key masked) |
+| PUT | `/api/settings` | Update AI settings |
+| POST | `/api/settings/test` | Test AI provider connection |
+| POST | `/api/ai/summarize` | Stream AI summary (SSE) |
+| POST | `/api/ai/concepts` | Stream key concepts (SSE) |
+| POST | `/api/ai/quiz` | Stream quiz questions (SSE) |
+| POST | `/api/ai/chat` | Stream chat response (SSE) |
+| GET | `/api/ai/summary/:videoId` | Get cached summary |
+| GET | `/api/ai/quiz/:videoId` | Get cached quiz |
 
 ---
 
@@ -118,6 +132,15 @@ cd frontend && npm run dev   # http://localhost:5173
 ---
 
 ## Development Log
+
+### 2026-03-27 — AI feature + Settings page
+- Added AI provider abstraction supporting Claude API and Ollama (local LLM)
+- Settings page at `/settings` to configure provider, API key, and model
+- Four AI features in the player sidebar: Summary, Concepts, Quiz, Chat
+- All AI responses stream token-by-token via SSE (no waiting for full response)
+- Summaries and quizzes cached in PostgreSQL (`summaries`, `quizzes` tables)
+- Claude uses `claude-opus-4-6` with adaptive thinking for best reasoning quality
+- Ollama requires model to be pulled locally before use (`ollama pull <model>`)
 
 ### 2026-03-27 — Initial scaffold
 - Bootstrapped monorepo from empty repo

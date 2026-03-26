@@ -132,12 +132,95 @@ directly by hooks and surfaces cleanly to the UI.
 
 ---
 
+---
+
+## 2026-03-27 — AI Feature + Settings Page
+
+### Decision 9 — Dual AI provider with shared abstraction
+**Choice:** `AIProvider` interface with two implementations — `ClaudeProvider`
+(Anthropic SDK) and `OllamaProvider` (native fetch to local Ollama server).
+A `factory.ts` reads settings from the DB and returns the right instance.
+
+**Rationale:** The user explicitly wanted to support both a cloud API key and a
+self-hosted local LLM. The abstraction keeps all AI controllers provider-agnostic
+— swap the provider in settings and all four AI features (summary, concepts, quiz,
+chat) use the new one instantly with zero code changes.
+
+**Trade-offs:** Prompt behaviour may differ between Claude and Ollama models.
+The quiz format relies on the model outputting valid JSON; smaller local models
+may hallucinate structure. The JSON extraction uses a regex fallback `\[[\s\S]*\]`
+to handle this gracefully, showing raw text if parsing fails.
+
+---
+
+### Decision 10 — Streaming via SSE (Server-Sent Events over POST)
+**Choice:** All AI responses stream token-by-token from backend → frontend using
+SSE (`text/event-stream`). The frontend reads the stream with `fetch` +
+`ReadableStream` rather than the `EventSource` API.
+
+**Rationale:** `EventSource` only supports GET — SSE over POST with `fetch` is
+required for passing a JSON body. The stream protocol uses three event types:
+`{type:"token", content:"…"}`, `{type:"done", content:"<full>"}`,
+`{type:"error", message:"…"}`.
+
+**Why stream at all:** AI responses for summaries and quizzes can take 10–30s.
+Token-by-token streaming with a blinking cursor gives immediate feedback and
+prevents the UI from looking frozen.
+
+**AbortController:** The `useAIStream` hook holds an `AbortController` ref,
+allowing in-flight requests to be cancelled when the user clicks Cancel or
+switches tabs.
+
+---
+
+### Decision 11 — Claude uses `claude-opus-4-6` with adaptive thinking
+**Choice:** `thinking: { type: "adaptive" }` with `max_tokens: 64000`.
+No `budget_tokens` (deprecated on Opus 4.6).
+
+**Rationale:** Adaptive thinking lets Claude decide how much reasoning depth is
+warranted per request. Summary and quiz generation benefit from extended reasoning;
+short chat replies do not. `adaptive` handles both without extra config.
+`max_tokens: 64000` gives room for long summaries and multi-question quizzes without
+hitting limits. Streaming is required at this token budget to avoid SDK HTTP timeouts.
+
+---
+
+### Decision 12 — Settings stored in PostgreSQL, not a config file
+**Choice:** A `settings` key-value table in Postgres. Defaults seeded at `db:init`.
+The API key is stored as plain text (acceptable for a local single-user app).
+
+**Rationale:** Consistent with the rest of the app's storage. No extra config file
+format to manage. Easy to read and update from the settings UI without a server
+restart. The frontend never receives the raw API key — only the last-4 masked form
+(`••••••••xxxx`).
+
+**Trade-offs:** For a shared/deployed app, the key should be encrypted at rest.
+Marked as a known limitation — acceptable for local use.
+
+---
+
+### Decision 13 — AI context uses notes (not transcripts)
+**Choice:** Until transcription is built, AI prompts are constructed from the
+video's title, description, and all timestamped notes.
+
+**Rationale:** Notes are the user's own understanding of the content — arguably
+the best signal for generating personalised summaries and quizzes. The prompts
+(`prompts.ts`) explicitly label this as "learner's notes" so the AI stays grounded
+in what the user actually captured rather than hallucinating video content.
+
+**Trade-off:** AI quality is proportional to note quality and quantity. An empty
+note list will yield a thin summary. This will improve once transcription is added.
+
+---
+
 ### Open questions / future decisions
 
 | Topic | Question | Priority |
 |---|---|---|
 | File serving | How are local video files served to Video.js? Express static middleware? | High — needed before first playback test |
+| Transcript pipeline | Whisper (local) or AssemblyAI (cloud) for auto-transcription? | High — unlocks much better AI context |
 | Thumbnail generation | Auto-generate from video frame, or user-supplied path? | Medium |
 | Export | Should notes be exportable (markdown, PDF)? | Low |
 | Search | Full-text search across notes? | Low |
-| Tags UI | Currently tags can be removed from notes; adding tags to notes from the UI is not yet wired (API exists) | Medium |
+| Tags UI | Adding tags to notes from the UI not yet wired (API exists) | Medium |
+| Auth | Full plan doc includes auth — still deferred for local app | Low |

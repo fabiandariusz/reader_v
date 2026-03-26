@@ -53,3 +53,39 @@ DO $$ BEGIN
   CREATE TRIGGER notes_updated_at BEFORE UPDATE ON notes
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- AI settings (key-value store)
+CREATE TABLE IF NOT EXISTS settings (
+  key        TEXT PRIMARY KEY,
+  value      TEXT,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Insert defaults (idempotent)
+INSERT INTO settings (key, value) VALUES
+  ('ai_provider',    'claude'),
+  ('claude_api_key', ''),
+  ('claude_model',   'claude-opus-4-6'),
+  ('ollama_base_url','http://localhost:11434'),
+  ('ollama_model',   'llama3.2')
+ON CONFLICT (key) DO NOTHING;
+
+-- AI-generated summaries
+CREATE TABLE IF NOT EXISTS summaries (
+  id           SERIAL PRIMARY KEY,
+  video_id     INTEGER     NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+  content      TEXT        NOT NULL,
+  generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS summaries_video_id_uidx ON summaries(video_id);
+
+-- AI-generated quizzes
+CREATE TABLE IF NOT EXISTS quizzes (
+  id           SERIAL PRIMARY KEY,
+  video_id     INTEGER     NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+  questions    JSONB       NOT NULL DEFAULT '[]',
+  generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS quizzes_video_id_uidx ON quizzes(video_id);
