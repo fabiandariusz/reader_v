@@ -1,4 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
+import fs from 'fs';
+import path from 'path';
 import pool from '../db/pool';
 import redis from '../db/redis';
 
@@ -85,6 +87,61 @@ export async function updateVideo(req: Request, res: Response, next: NextFunctio
     if (!rows[0]) return res.status(404).json({ message: 'Video not found' });
     await redis.del('videos:all').catch(() => null);
     res.json(rows[0]);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function streamVideo(req: Request, res: Response, next: NextFunction) {
+  try {
+    const id = Number(req.params.id);
+    const { rows } = await pool.query<{ file_path: string }>(
+      'SELECT file_path FROM videos WHERE id = $1',
+      [id],
+    );
+
+    if (!rows[0]) return res.status(404).json({ message: 'Video not found' });
+
+    const filePath = rows[0].file_path;
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: 'Video file not found on disk' });
+    }
+
+    const stat = fs.statSync(filePath);
+    const fileSize = stat.size;
+    const ext = path.extname(filePath).toLowerCase();
+    const mimeTypes: Record<string, string> = {
+      '.mp4':  'video/mp4',
+      '.webm': 'video/webm',
+      '.ogg':  'video/ogg',
+      '.mov':  'video/quicktime',
+      '.mkv':  'video/x-matroska',
+    };
+    const contentType = mimeTypes[ext] ?? 'video/mp4';
+
+    const rangeHeader = req.headers.range;
+    if (rangeHeader) {
+      const [startStr, endStr] = rangeHeader.replace(/bytes=/, '').split('-');
+      const start = parseInt(startStr, 10);
+      const end   = endStr ? parseInt(endStr, 10) : fileSize - 1;
+      const chunkSize = end - start + 1;
+
+      res.writeHead(206, {
+        'Content-Range':  `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges':  'bytes',
+        'Content-Length': chunkSize,
+        'Content-Type':   contentType,
+      });
+      fs.createReadStream(filePath, { start, end }).pipe(res);
+    } else {
+      res.writeHead(200, {
+        'Content-Length': fileSize,
+        'Content-Type':   contentType,
+        'Accept-Ranges':  'bytes',
+      });
+      fs.createReadStream(filePath).pipe(res);
+    }
   } catch (err) {
     next(err);
   }

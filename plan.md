@@ -134,6 +134,25 @@ directly by hooks and surfaces cleanly to the UI.
 
 ---
 
+## 2026-03-28 — File Serving
+
+### Decision 14 — Streaming endpoint with HTTP Range support
+**Choice:** `GET /api/videos/:id/stream` — looks up `file_path` from DB, streams
+the file using `fs.createReadStream` with Range request support.
+
+**Rationale:**
+- Video.js requires HTTP 206 Partial Content (range requests) to support seeking.
+  A plain `express.static` on a directory would also work, but anchoring the serve
+  to the DB record means only registered videos are served — no arbitrary file access.
+- The endpoint returns 404 if the DB row is missing or the file doesn't exist on disk,
+  giving the user a clear error rather than a silent playback failure.
+- `PlayerPage` now passes `/api/videos/:id/stream` as the `src` prop instead of the
+  raw `file_path`, so the browser never needs to know the local path.
+
+**MIME types supported:** mp4, webm, ogg, mov, mkv.
+
+---
+
 ## 2026-03-27 — AI Feature + Settings Page
 
 ### Decision 9 — Dual AI provider with shared abstraction
@@ -217,7 +236,7 @@ note list will yield a thin summary. This will improve once transcription is add
 
 | Topic | Question | Priority |
 |---|---|---|
-| File serving | How are local video files served to Video.js? Express static middleware? | High — needed before first playback test |
+| ~~File serving~~ | ~~How are local video files served to Video.js?~~ | ~~High~~ — **Done** |
 | Transcript pipeline | Whisper (local) or AssemblyAI (cloud) for auto-transcription? | High — unlocks much better AI context |
 | Thumbnail generation | Auto-generate from video frame, or user-supplied path? | Medium |
 | Export | Should notes be exportable (markdown, PDF)? | Low |

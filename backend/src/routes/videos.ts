@@ -5,14 +5,16 @@ import {
   createVideo,
   updateVideo,
   deleteVideo,
+  streamVideo,
 } from '../controllers/videoController';
 
 const router = Router();
 
-router.get('/',      listVideos);   // GET  /api/videos
-router.get('/:id',   getVideo);     // GET  /api/videos/:id
-router.post('/',     createVideo);  // POST /api/videos
-router.put('/:id',   updateVideo);  // PUT  /api/videos/:id
-router.delete('/:id',deleteVideo);  // DEL  /api/videos/:id
+router.get('/',           listVideos);   // GET  /api/videos
+router.get('/:id/stream', streamVideo);  // GET  /api/videos/:id/stream
+router.get('/:id',        getVideo);     // GET  /api/videos/:id
+router.post('/',          createVideo);  // POST /api/videos
+router.put('/:id',        updateVideo);  // PUT  /api/videos/:id
+router.delete('/:id',     deleteVideo);  // DEL  /api/videos/:id
 
 export default router;
