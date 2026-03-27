@@ -134,6 +134,25 @@ directly by hooks and surfaces cleanly to the UI.
 
 ---
 
+## 2026-03-28 — Tags UI
+
+### Decision 15 — Inline tag input on NoteItem with find-or-create logic
+**Choice:** Each note shows a `+ tag` button that expands into a small text input
+with a native `<datalist>` for autocomplete against existing tags. On submit
+(Enter or blur), `PlayerPage` checks if the tag name already exists in the global
+tag list — if so it reuses it, otherwise it creates it — then calls `addTagToNote`.
+
+**Rationale:**
+- The tag API (`/api/tags` + `/api/notes/:id/tags`) was already complete; only
+  the frontend UI was missing.
+- Find-or-create in the parent (`PlayerPage`) keeps `NoteItem` simple — it only
+  receives a `(noteId, tagName) => Promise<void>` callback and doesn't need to
+  know about the global tag list internals.
+- Native `<datalist>` gives autocomplete with zero dependencies and matches the
+  project's "no component library" constraint.
+
+---
+
 ## 2026-03-28 — File Serving
 
 ### Decision 14 — Streaming endpoint with HTTP Range support
@@ -241,5 +260,5 @@ note list will yield a thin summary. This will improve once transcription is add
 | Thumbnail generation | Auto-generate from video frame, or user-supplied path? | Medium |
 | Export | Should notes be exportable (markdown, PDF)? | Low |
 | Search | Full-text search across notes? | Low |
-| Tags UI | Adding tags to notes from the UI not yet wired (API exists) | Medium |
+| ~~Tags UI~~ | ~~Adding tags to notes from the UI not yet wired~~ | ~~Medium~~ — **Done** |
 | Auth | Full plan doc includes auth — still deferred for local app | Low |

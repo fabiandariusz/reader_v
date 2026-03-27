@@ -1,20 +1,29 @@
 import { useState, useRef, useEffect } from 'react';
 import { formatTime } from '@/utils/time';
-import type { Note } from '@/types';
+import type { Note, Tag } from '@/types';
 
 interface Props {
   note: Note;
+  allTags: Tag[];
   onSeek: (timestamp: number) => void;
   onUpdate: (id: number, content: string) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
+  onAddTag: (noteId: number, tagName: string) => Promise<void>;
   onRemoveTag: (noteId: number, tagId: number) => Promise<void>;
 }
 
-export default function NoteItem({ note, onSeek, onUpdate, onDelete, onRemoveTag }: Props) {
+export default function NoteItem({ note, allTags, onSeek, onUpdate, onDelete, onAddTag, onRemoveTag }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(note.content);
   const [saving, setSaving] = useState(false);
+  const [addingTag, setAddingTag] = useState(false);
+  const [tagInput, setTagInput] = useState('');
+  const tagInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (addingTag) tagInputRef.current?.focus();
+  }, [addingTag]);
 
   useEffect(() => {
     if (editing) textareaRef.current?.focus();
@@ -39,6 +48,19 @@ export default function NoteItem({ note, onSeek, onUpdate, onDelete, onRemoveTag
 
   const handleDelete = async () => {
     if (confirm('Delete this note?')) await onDelete(note.id);
+  };
+
+  const handleAddTag = async () => {
+    const name = tagInput.trim();
+    if (!name) { setAddingTag(false); return; }
+    await onAddTag(note.id, name);
+    setTagInput('');
+    setAddingTag(false);
+  };
+
+  const handleTagKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') { e.preventDefault(); handleAddTag(); }
+    if (e.key === 'Escape') { setTagInput(''); setAddingTag(false); }
   };
 
   return (
@@ -81,22 +103,46 @@ export default function NoteItem({ note, onSeek, onUpdate, onDelete, onRemoveTag
         <p className="note-item__text">{note.content}</p>
       )}
 
-      {note.tags.length > 0 && (
-        <div className="note-item__tags">
-          {note.tags.map((tag) => (
-            <span key={tag.id} className="tag tag--removable">
-              {tag.name}
-              <button
-                className="tag__remove"
-                onClick={() => onRemoveTag(note.id, tag.id)}
-                title="Remove tag"
-              >
-                ×
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
+      <div className="note-item__tags">
+        {note.tags.map((tag) => (
+          <span key={tag.id} className="tag tag--removable">
+            {tag.name}
+            <button
+              className="tag__remove"
+              onClick={() => onRemoveTag(note.id, tag.id)}
+              title="Remove tag"
+            >
+              ×
+            </button>
+          </span>
+        ))}
+
+        {addingTag ? (
+          <>
+            <datalist id={`tags-list-${note.id}`}>
+              {allTags.map((t) => <option key={t.id} value={t.name} />)}
+            </datalist>
+            <input
+              ref={tagInputRef}
+              className="tag-input"
+              list={`tags-list-${note.id}`}
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={handleTagKeyDown}
+              onBlur={handleAddTag}
+              placeholder="tag name"
+            />
+          </>
+        ) : (
+          <button
+            className="tag tag--add"
+            onClick={() => setAddingTag(true)}
+            title="Add tag"
+          >
+            + tag
+          </button>
+        )}
+      </div>
 
       <div className="note-item__actions">
         <button

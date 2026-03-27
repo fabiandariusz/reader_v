@@ -6,6 +6,7 @@ import NoteComposer  from '@/components/NoteComposer';
 import AIPanel       from '@/components/AIPanel';
 import { useVideo }  from '@/hooks/useVideos';
 import { useNotes }  from '@/hooks/useNotes';
+import { useTags }   from '@/hooks/useTags';
 import { formatTime, formatDate } from '@/utils/time';
 import type Player from 'video.js/dist/types/player';
 
@@ -19,8 +20,9 @@ export default function PlayerPage() {
   const { video, loading: videoLoading, error: videoError } = useVideo(videoId);
   const {
     notes, loading: notesLoading,
-    addNote, updateNote, removeNote, removeTagFromNote,
+    addNote, updateNote, removeNote, addTagToNote, removeTagFromNote,
   } = useNotes(videoId);
+  const { tags: allTags, createTag } = useTags();
 
   const [currentTime, setCurrentTime] = useState(0);
   const [sideTab,     setSideTab]     = useState<SideTab>('notes');
@@ -28,6 +30,12 @@ export default function PlayerPage() {
 
   const handlePlayerReady = useCallback((player: Player) => { playerRef.current = player; }, []);
   const handleTimeUpdate  = useCallback((time: number) => { setCurrentTime(time); }, []);
+
+  const handleAddTag = useCallback(async (noteId: number, tagName: string) => {
+    const existing = allTags.find((t) => t.name === tagName.toLowerCase().trim());
+    const tag = existing ?? await createTag(tagName);
+    await addTagToNote(noteId, tag.id);
+  }, [allTags, createTag, addTagToNote]);
 
   const handleSeek = useCallback((timestamp: number) => {
     playerRef.current?.currentTime(timestamp);
@@ -118,9 +126,11 @@ export default function PlayerPage() {
                   <NoteItem
                     key={note.id}
                     note={note}
+                    allTags={allTags}
                     onSeek={handleSeek}
                     onUpdate={updateNote}
                     onDelete={removeNote}
+                    onAddTag={handleAddTag}
                     onRemoveTag={removeTagFromNote}
                   />
                 ))

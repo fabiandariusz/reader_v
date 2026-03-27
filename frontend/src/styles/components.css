@@ -247,6 +247,34 @@
   color: var(--color-text);
 }
 
+.tag--add {
+  cursor: pointer;
+  color: var(--color-text-faint);
+  border: 1px dashed var(--color-border);
+  background: transparent;
+}
+
+.tag--add:hover {
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+
+.tag-input {
+  height: 22px;
+  padding: 0 6px;
+  font-size: var(--text-xs);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text);
+  width: 90px;
+  outline: none;
+}
+
+.tag-input:focus {
+  border-color: var(--color-text-faint);
+}
+
 /* ── Note Editor / Composer ─────────────────────────────── */
 .note-composer {
   display: flex;
