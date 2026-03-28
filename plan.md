@@ -134,6 +134,50 @@ directly by hooks and surfaces cleanly to the UI.
 
 ---
 
+## 2026-03-29 — Notes Export
+
+### Decision 19 — Server-side export via GET /api/videos/:id/export?format=md|txt|pdf
+**Choice:** Single endpoint on the video route. Backend fetches the video title/description +
+all notes (with tags, ordered by timestamp) and renders the chosen format. Client receives a
+`Content-Disposition: attachment` response and triggers a download via a temporary object URL.
+
+**Formats:**
+- **Markdown** — `# Title`, blockquote description, each note as `### [mm:ss]` heading with content and bold tag list, `---` separator.
+- **Plain text** — same structure, no markdown syntax (underline title, bracketed timestamp, `Tags:` label).
+- **PDF** — `pdfkit` (A4, 50pt margins): bold title, italic description, grey timestamp chip, body text, italic tags. Pipe directly to `res`.
+
+**UI:** `↓ Export` ghost button in the notes panel header, visible only when the Notes tab is
+active and there is at least one note. Clicking opens a three-item dropdown (Markdown, Plain text, PDF).
+Dropdown closes on selection; filename is derived from the video title (sanitised, max 60 chars).
+
+**No new dependency on the frontend** — blob download uses a temporary `<a>` element and
+`URL.createObjectURL`. `pdfkit` added to the backend only.
+
+---
+
+## 2026-03-29 — Thumbnail Generation
+
+### Decision 18 — ffmpeg frame extraction, async fire-and-forget
+**Choice:** `thumbnailService.ts` uses `fluent-ffmpeg` to probe video duration and extract a
+JPEG frame at 10% of duration. Called fire-and-forget from `createVideo` (response returns
+immediately; thumbnail arrives seconds later). Manual regeneration available via
+`POST /api/videos/:id/thumbnail`.
+
+**Storage:** Thumbnails written to `backend/uploads/thumbnails/{videoId}.jpg`. Express serves
+`uploads/thumbnails/` at `/thumbnails` as static files. Vite proxies `/thumbnails` to the
+backend in development. The `thumbnail_path` stored in the DB is the URL path
+(`/thumbnails/{videoId}.jpg`), not the filesystem path.
+
+**Duration:** Also extracted from ffprobe metadata and stored in the `duration` column on the
+same async pass. The `VideoCard` duration badge is now populated automatically.
+
+**Failure handling:** All ffmpeg errors are swallowed — a video without a thumbnail is fully
+functional. No retry logic; user can trigger regeneration manually.
+
+**Prerequisite:** `ffmpeg` must be installed on the host system (`brew install ffmpeg`).
+
+---
+
 ## 2026-03-29 — Transcript Pipeline
 
 ### Decision 16 — Dual transcription provider with shared abstraction
@@ -295,8 +339,9 @@ improving context quality regardless of note volume.
 
 | Topic | Question | Priority |
 |---|---|---|
-| Thumbnail generation | Auto-generate from video frame, or user-supplied path? | Medium |
-| Export | Should notes be exportable (markdown, PDF)? | Low |
+| ~~Thumbnail generation~~ | ~~Auto-generate from video frame, or user-supplied path?~~ | ~~Medium~~ — **Done** |
+| ~~Export~~ | ~~Should notes be exportable (markdown, PDF)?~~ | ~~Low~~ — **Done** |
+| ~~Export~~ | ~~Should notes be exportable (markdown, PDF)?~~ | ~~Low~~ — **Done** |
 | Search | Full-text search across notes? | Low |
 | Auth | Full plan doc includes auth — still deferred for local app | Low |
 | ~~File serving~~ | ~~How are local video files served to Video.js?~~ | ~~High~~ — **Done** |

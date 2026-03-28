@@ -1,7 +1,7 @@
 export interface AISettings {
   provider:      'claude' | 'ollama';
   claudeApiKey:  string;
-<br>  claudeModel:   string;
+  claudeModel:   string;
   ollamaBaseUrl: string;
   ollamaModel:   string;
 }

@@ -24,6 +24,9 @@ An educational video learning app with timestamped note-taking. Watch videos and
 | Tags UI — add/remove tags on notes | Done |
 | Transcript pipeline (Whisper + AssemblyAI) | Done |
 | Development request logging (morgan) | Done |
+| Thumbnail generation (ffmpeg frame extraction) | Done |
+| Notes export (Markdown, Plain text, PDF) | Done |
+| Unit tests (Jest + Vitest) | Done |
 
 ---
 
@@ -56,10 +59,13 @@ reader_v/
     └── src/
         ├── ai/             # types, claude.ts, ollama.ts, factory.ts, prompts.ts
         ├── transcription/  # types, whisper.ts, assemblyai.ts, factory.ts
+        ├── services/       # thumbnailService.ts (ffmpeg frame extraction)
         ├── controllers/    # video, note, tag, settings, ai, transcription controllers
         ├── db/             # pool.ts (pg), redis.ts, schema.sql, init.ts
         ├── middleware/     # errorHandler, notFound
         └── routes/         # /api/videos, /api/notes, /api/tags, /api/settings, /api/ai, /api/transcription
+    uploads/
+    └── thumbnails/         # Generated JPEG thumbnails served at /thumbnails/:id.jpg
 ```
 
 ---
@@ -93,6 +99,8 @@ reader_v/
 | GET | `/api/ai/summary/:videoId` | Get cached summary |
 | GET | `/api/ai/quiz/:videoId` | Get cached quiz |
 | GET | `/api/videos/:id/stream` | Stream local video file (HTTP Range) |
+| POST | `/api/videos/:id/thumbnail` | Regenerate thumbnail for a video |
+| GET | `/api/videos/:id/export` | Export notes as `?format=md\|txt\|pdf` |
 | GET | `/api/transcription/:videoId` | Get transcript status / content |
 | POST | `/api/transcription/:videoId` | Start transcription job |
 
@@ -105,6 +113,7 @@ reader_v/
 - Node.js 18+
 - PostgreSQL running locally
 - Redis running locally (optional — app degrades gracefully without it)
+- `ffmpeg` installed on the host system (for thumbnail generation) — `brew install ffmpeg`
 - For Whisper transcription: Python 3 + `pip install openai-whisper`
 - For AssemblyAI transcription: an AssemblyAI API key (configured in Settings)
 
@@ -125,6 +134,9 @@ cd backend && npm run db:init
 # 4. Start both servers (two terminals)
 cd backend  && npm run dev   # http://localhost:3001
 cd frontend && npm run dev   # http://localhost:5173
+
+# Run all tests (from repo root)
+npm test
 ```
 
 ### Environment Variables

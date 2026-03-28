@@ -6,6 +6,8 @@
     "dev:frontend": "cd frontend && npm run dev",
     "dev:backend":  "cd backend  && npm run dev",
     "install:all":  "cd frontend && npm install && cd ../backend && npm install",
-    "db:init":      "cd backend  && npm run db:init"
+    "db:init":      "cd backend  && npm run db:init",
+    "test":         "cd backend && npm test && cd ../frontend && npm test",
+    "test:coverage": "cd backend && npm run test:coverage"
   }
 }

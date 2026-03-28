@@ -9,10 +9,19 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    include: ['src/__tests__/**/*.test.ts'],
+  },
   server: {
     port: 5173,
     proxy: {
       '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+      '/thumbnails': {
         target: 'http://localhost:3001',
         changeOrigin: true,
       },

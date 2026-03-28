@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import path from 'path';
 import videoRoutes    from './routes/videos';
 import noteRoutes     from './routes/notes';
 import tagRoutes      from './routes/tags';
@@ -16,6 +17,7 @@ const PORT = Number(process.env.PORT ?? 3001);
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({ origin: 'http://localhost:5173' }));
 app.use(express.json());
+app.use('/thumbnails', express.static(path.join(__dirname, '../uploads/thumbnails')));
 if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'));
 }

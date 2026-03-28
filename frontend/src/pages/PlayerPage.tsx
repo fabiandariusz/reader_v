@@ -9,7 +9,21 @@ import { useNotes }  from '@/hooks/useNotes';
 import { useTags }   from '@/hooks/useTags';
 import { formatTime, formatDate } from '@/utils/time';
 import { transcriptionApi, type TranscriptStatus } from '@/api/transcription';
+import { videosApi } from '@/api/videos';
 import type Player from 'video.js/dist/types/player';
+
+type ExportFormat = 'md' | 'txt' | 'pdf';
+
+const EXPORT_EXTENSIONS: Record<ExportFormat, string> = { md: 'md', txt: 'txt', pdf: 'pdf' };
+
+function triggerDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 type SideTab = 'notes' | 'ai';
 
@@ -28,6 +42,7 @@ export default function PlayerPage() {
   const [currentTime,      setCurrentTime]      = useState(0);
   const [sideTab,          setSideTab]          = useState<SideTab>('notes');
   const [transcriptStatus, setTranscriptStatus] = useState<TranscriptStatus>({ status: 'none' });
+  const [exportOpen,       setExportOpen]       = useState(false);
   const playerRef = useRef<Player | null>(null);
 
   // Load transcript status on mount and poll while processing
@@ -68,6 +83,13 @@ export default function PlayerPage() {
     playerRef.current?.currentTime(timestamp);
     playerRef.current?.play();
   }, []);
+
+  const handleExport = useCallback(async (format: ExportFormat) => {
+    setExportOpen(false);
+    const blob = await videosApi.exportNotes(videoId, format);
+    const safe = (video?.title ?? 'notes').replace(/[^a-z0-9_\-]/gi, '_').slice(0, 60);
+    triggerDownload(blob, `${safe}.${EXPORT_EXTENSIONS[format]}`);
+  }, [videoId, video?.title]);
 
   if (videoLoading) {
     return (
@@ -162,6 +184,24 @@ export default function PlayerPage() {
               ✦ AI
             </button>
           </div>
+          {sideTab === 'notes' && notes.length > 0 && (
+            <div className="export-menu">
+              <button
+                className="btn btn--ghost btn--sm"
+                onClick={() => setExportOpen((o) => !o)}
+                title="Export notes"
+              >
+                ↓ Export
+              </button>
+              {exportOpen && (
+                <div className="export-menu__dropdown">
+                  <button onClick={() => handleExport('md')}>Markdown (.md)</button>
+                  <button onClick={() => handleExport('txt')}>Plain text (.txt)</button>
+                  <button onClick={() => handleExport('pdf')}>PDF (.pdf)</button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Notes pane */}

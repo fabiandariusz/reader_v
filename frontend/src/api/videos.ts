@@ -16,4 +16,7 @@ export const videosApi = {
 
   remove: (id: number) =>
     client.delete(`/videos/${id}`).then((r) => r.data),
+
+  exportNotes: (id: number, format: 'md' | 'txt' | 'pdf') =>
+    client.get(`/videos/${id}/export`, { params: { format }, responseType: 'blob' }).then((r) => r.data as Blob),
 };
