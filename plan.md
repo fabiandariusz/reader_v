@@ -161,6 +161,17 @@ AssemblyAI key is masked in GET response (same as Claude key).
 
 ---
 
+## 2026-03-28 — Dev Logging
+
+### Decision 17 — Morgan for HTTP request logging in development
+**Choice:** `morgan('dev')` middleware, gated behind `NODE_ENV !== 'production'`.
+
+**Rationale:** No request logging existed — debugging API calls required guesswork.
+`morgan` with the `dev` format logs method, path, status code, and response time on
+every request. Gating on `NODE_ENV` keeps production output clean.
+
+---
+
 ## 2026-03-28 — Tags UI
 
 ### Decision 15 — Inline tag input on NoteItem with find-or-create logic
@@ -274,7 +285,9 @@ the best signal for generating personalised summaries and quizzes. The prompts
 in what the user actually captured rather than hallucinating video content.
 
 **Trade-off:** AI quality is proportional to note quality and quantity. An empty
-note list will yield a thin summary. This will improve once transcription is added.
+note list will yield a thin summary. **Update (2026-03-29):** transcript pipeline
+is now built — when a transcript exists it is appended to all AI prompts, significantly
+improving context quality regardless of note volume.
 
 ---
 
@@ -282,10 +295,10 @@ note list will yield a thin summary. This will improve once transcription is add
 
 | Topic | Question | Priority |
 |---|---|---|
-| ~~File serving~~ | ~~How are local video files served to Video.js?~~ | ~~High~~ — **Done** |
-| ~~Transcript pipeline~~ | ~~Whisper or AssemblyAI for auto-transcription~~ | ~~High~~ — **Done** |
 | Thumbnail generation | Auto-generate from video frame, or user-supplied path? | Medium |
 | Export | Should notes be exportable (markdown, PDF)? | Low |
 | Search | Full-text search across notes? | Low |
-| ~~Tags UI~~ | ~~Adding tags to notes from the UI not yet wired~~ | ~~Medium~~ — **Done** |
 | Auth | Full plan doc includes auth — still deferred for local app | Low |
+| ~~File serving~~ | ~~How are local video files served to Video.js?~~ | ~~High~~ — **Done** |
+| ~~Transcript pipeline~~ | ~~Whisper or AssemblyAI for auto-transcription~~ | ~~High~~ — **Done** |
+| ~~Tags UI~~ | ~~Adding tags to notes from the UI not yet wired~~ | ~~Medium~~ — **Done** |
