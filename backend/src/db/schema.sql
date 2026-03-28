@@ -89,3 +89,21 @@ CREATE TABLE IF NOT EXISTS quizzes (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS quizzes_video_id_uidx ON quizzes(video_id);
+
+-- Transcripts (Whisper or AssemblyAI)
+CREATE TABLE IF NOT EXISTS transcripts (
+  id           SERIAL PRIMARY KEY,
+  video_id     INTEGER NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+  content      TEXT    NOT NULL,
+  segments     JSONB   NOT NULL DEFAULT '[]',
+  generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS transcripts_video_id_uidx ON transcripts(video_id);
+
+-- Transcription settings defaults
+INSERT INTO settings (key, value) VALUES
+  ('transcription_provider', 'whisper'),
+  ('whisper_model',          'base'),
+  ('assemblyai_api_key',     '')
+ON CONFLICT (key) DO NOTHING;

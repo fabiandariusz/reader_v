@@ -134,6 +134,33 @@ directly by hooks and surfaces cleanly to the UI.
 
 ---
 
+## 2026-03-29 — Transcript Pipeline
+
+### Decision 16 — Dual transcription provider with shared abstraction
+**Choice:** `TranscriptionProvider` interface with two implementations — `WhisperProvider`
+(spawns `python3 -m whisper` as a subprocess) and `AssemblyAIProvider` (REST API with
+file upload + polling). A `factory.ts` reads settings from the DB and returns the right one.
+User configures provider in the Settings page.
+
+**Rationale:** Same dual-provider pattern as AI (Claude/Ollama). Both providers normalise
+output to `{ text, segments: [{start, end, text}] }` so the rest of the app is provider-agnostic.
+
+**Job lifecycle:** `POST /api/transcription/:videoId` kicks off a background async job and
+returns `{ status: 'processing' }` immediately. The frontend polls
+`GET /api/transcription/:videoId` every 4 seconds until status is `done` or `error`.
+In-memory job map (acceptable for local single-user app).
+
+**AI context upgrade:** All four AI features (summary, concepts, quiz, chat) now fetch the
+transcript from the DB and append it to the prompt. Notes remain in the prompt too — both
+are passed. If no transcript exists yet, prompts fall back to notes only (unchanged behaviour).
+
+**DB:** New `transcripts` table — `video_id` (unique), `content` (full text), `segments` (JSONB).
+
+**Settings:** Three new keys — `transcription_provider`, `whisper_model`, `assemblyai_api_key`.
+AssemblyAI key is masked in GET response (same as Claude key).
+
+---
+
 ## 2026-03-28 — Tags UI
 
 ### Decision 15 — Inline tag input on NoteItem with find-or-create logic
@@ -256,7 +283,7 @@ note list will yield a thin summary. This will improve once transcription is add
 | Topic | Question | Priority |
 |---|---|---|
 | ~~File serving~~ | ~~How are local video files served to Video.js?~~ | ~~High~~ — **Done** |
-| Transcript pipeline | Whisper (local) or AssemblyAI (cloud) for auto-transcription? | High — unlocks much better AI context |
+| ~~Transcript pipeline~~ | ~~Whisper or AssemblyAI for auto-transcription~~ | ~~High~~ — **Done** |
 | Thumbnail generation | Auto-generate from video frame, or user-supplied path? | Medium |
 | Export | Should notes be exportable (markdown, PDF)? | Low |
 | Search | Full-text search across notes? | Low |

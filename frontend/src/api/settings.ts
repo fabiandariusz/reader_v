@@ -1,11 +1,14 @@
 import client from './client';
 
 export interface AISettings {
-  provider:      'claude' | 'ollama';
-  claudeApiKey:  string;
-  claudeModel:   string;
-  ollamaBaseUrl: string;
-  ollamaModel:   string;
+  provider:               'claude' | 'ollama';
+  claudeApiKey:           string;
+  claudeModel:            string;
+  ollamaBaseUrl:          string;
+  ollamaModel:            string;
+  transcriptionProvider:  'whisper' | 'assemblyai';
+  whisperModel:           string;
+  assemblyaiApiKey:       string;
 }
 
 export const settingsApi = {

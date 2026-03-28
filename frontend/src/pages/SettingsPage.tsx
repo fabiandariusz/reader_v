@@ -6,7 +6,8 @@ export default function SettingsPage() {
   const { settings, loading, error: loadError, save } = useSettings();
 
   const [form, setForm] = useState<Partial<AISettings>>({});
-  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [apiKeyInput,      setApiKeyInput]      = useState('');
+  const [assemblyKeyInput, setAssemblyKeyInput] = useState('');
   const [saving,  setSaving]  = useState(false);
   const [testing, setTesting] = useState(false);
   const [testMsg, setTestMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -15,10 +16,12 @@ export default function SettingsPage() {
   useEffect(() => {
     if (settings) {
       setForm({
-        provider:      settings.provider,
-        claudeModel:   settings.claudeModel,
-        ollamaBaseUrl: settings.ollamaBaseUrl,
-        ollamaModel:   settings.ollamaModel,
+        provider:              settings.provider,
+        claudeModel:           settings.claudeModel,
+        ollamaBaseUrl:         settings.ollamaBaseUrl,
+        ollamaModel:           settings.ollamaModel,
+        transcriptionProvider: settings.transcriptionProvider,
+        whisperModel:          settings.whisperModel,
       });
     }
   }, [settings]);
@@ -31,18 +34,23 @@ export default function SettingsPage() {
     setSaveMsg('');
     try {
       const payload: Record<string, string> = {
-        ai_provider:    form.provider      ?? 'claude',
-        claude_model:   form.claudeModel   ?? 'claude-opus-4-6',
-        ollama_base_url:form.ollamaBaseUrl ?? 'http://localhost:11434',
-        ollama_model:   form.ollamaModel   ?? 'llama3.2',
+        ai_provider:             form.provider              ?? 'claude',
+        claude_model:            form.claudeModel           ?? 'claude-opus-4-6',
+        ollama_base_url:         form.ollamaBaseUrl         ?? 'http://localhost:11434',
+        ollama_model:            form.ollamaModel           ?? 'llama3.2',
+        transcription_provider:  form.transcriptionProvider ?? 'whisper',
+        whisper_model:           form.whisperModel          ?? 'base',
       };
-      // Only update key if user typed a new one (not the masked placeholder)
       if (apiKeyInput && !apiKeyInput.startsWith('•')) {
         payload.claude_api_key = apiKeyInput;
+      }
+      if (assemblyKeyInput && !assemblyKeyInput.startsWith('•')) {
+        payload.assemblyai_api_key = assemblyKeyInput;
       }
       await save(payload);
       setSaveMsg('Settings saved.');
       setApiKeyInput('');
+      setAssemblyKeyInput('');
     } catch {
       setSaveMsg('Failed to save settings.');
     } finally {
@@ -162,6 +170,63 @@ export default function SettingsPage() {
               <span className="settings-hint">
                 Pull a model first: <code>ollama pull llama3.2</code>
               </span>
+            </div>
+          </div>
+        )}
+
+        {/* Transcription settings */}
+        <div className="settings-section">
+          <div className="settings-section__label">Transcription Provider</div>
+          <div className="provider-toggle">
+            {(['whisper', 'assemblyai'] as const).map((p) => (
+              <button
+                key={p}
+                className={`provider-btn${form.transcriptionProvider === p ? ' provider-btn--active' : ''}`}
+                onClick={() => set('transcriptionProvider', p)}
+              >
+                {p === 'whisper' ? '🎙 Whisper (Local)' : '☁ AssemblyAI (Cloud)'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {form.transcriptionProvider === 'whisper' && (
+          <div className="settings-section">
+            <div className="settings-section__label">Whisper Configuration</div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="whisper-model">Model</label>
+              <select
+                id="whisper-model"
+                className="form-input"
+                value={form.whisperModel ?? 'base'}
+                onChange={(e) => set('whisperModel', e.target.value)}
+              >
+                <option value="tiny">tiny (fastest, least accurate)</option>
+                <option value="base">base (recommended)</option>
+                <option value="small">small</option>
+                <option value="medium">medium</option>
+                <option value="large">large (slowest, most accurate)</option>
+              </select>
+              <span className="settings-hint">Requires Python 3 + <code>pip install openai-whisper</code></span>
+            </div>
+          </div>
+        )}
+
+        {form.transcriptionProvider === 'assemblyai' && (
+          <div className="settings-section">
+            <div className="settings-section__label">AssemblyAI Configuration</div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="assemblyai-key">API Key</label>
+              <input
+                id="assemblyai-key"
+                className="form-input"
+                type="password"
+                placeholder={settings?.assemblyaiApiKey || 'Enter AssemblyAI API key…'}
+                value={assemblyKeyInput}
+                onChange={(e) => setAssemblyKeyInput(e.target.value)}
+                autoComplete="off"
+              />
+              <span className="settings-hint">Get your key at <span className="settings-link">assemblyai.com</span></span>
             </div>
           </div>
         )}

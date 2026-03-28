@@ -11,26 +11,31 @@ function notesBlock(notes: Note[]): string {
     .join('\n');
 }
 
+function transcriptBlock(transcript: string | null): string {
+  if (!transcript) return '';
+  return `\n\nFull transcript:\n${transcript}`;
+}
+
 function formatTime(s: number): string {
   const m = Math.floor(s / 60), sec = Math.floor(s % 60);
   return `${m}:${String(sec).padStart(2, '0')}`;
 }
 
-export function summaryPrompt(title: string, description: string | null, notes: Note[]): string {
+export function summaryPrompt(title: string, description: string | null, notes: Note[], transcript: string | null = null): string {
   return `Video: "${title}"${description ? `\nDescription: ${description}` : ''}
 
 Learner's notes:
-${notesBlock(notes)}
+${notesBlock(notes)}${transcriptBlock(transcript)}
 
 Write a comprehensive summary of the key ideas covered in this video based on the notes above.
 Group related ideas together. Keep it focused and actionable for the learner.`;
 }
 
-export function conceptsPrompt(title: string, notes: Note[]): string {
+export function conceptsPrompt(title: string, notes: Note[], transcript: string | null = null): string {
   return `Video: "${title}"
 
 Learner's notes:
-${notesBlock(notes)}
+${notesBlock(notes)}${transcriptBlock(transcript)}
 
 Extract the 5–10 most important concepts, terms, or ideas from these notes.
 For each, give:
@@ -38,11 +43,11 @@ For each, give:
 - One sentence explaining it in simple terms`;
 }
 
-export function quizPrompt(title: string, notes: Note[]): string {
+export function quizPrompt(title: string, notes: Note[], transcript: string | null = null): string {
   return `Video: "${title}"
 
 Learner's notes:
-${notesBlock(notes)}
+${notesBlock(notes)}${transcriptBlock(transcript)}
 
 Generate 5 multiple-choice quiz questions that test understanding of the material in these notes.
 Format each question EXACTLY as valid JSON inside a JSON array, like this:
@@ -62,9 +67,10 @@ export function chatPrompt(
   title: string,
   notes: Note[],
   history: { role: 'user' | 'assistant'; content: string }[],
-  userMessage: string
+  userMessage: string,
+  transcript: string | null = null,
 ): { system: string; prompt: string } {
-  const context = `Video: "${title}"\n\nLearner's notes:\n${notesBlock(notes)}`;
+  const context = `Video: "${title}"\n\nLearner's notes:\n${notesBlock(notes)}${transcriptBlock(transcript)}`;
   const historyText = history
     .map((m) => `${m.role === 'user' ? 'Learner' : 'Assistant'}: ${m.content}`)
     .join('\n');

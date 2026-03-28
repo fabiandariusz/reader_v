@@ -1,18 +1,27 @@
 import type { Request, Response, NextFunction } from 'express';
 import pool from '../db/pool';
 import { loadSettings } from '../ai/factory';
+import { loadTranscriptionSettings } from '../transcription/factory';
 import { ClaudeProvider } from '../ai/claude';
 import { OllamaProvider } from '../ai/ollama';
 
 /** GET /api/settings — returns all settings, masking the API key */
 export async function getSettings(req: Request, res: Response, next: NextFunction) {
   try {
-    const s = await loadSettings();
-    // Mask key: show last 4 chars only if set
-    const maskedKey = s.claudeApiKey
-      ? `••••••••${s.claudeApiKey.slice(-4)}`
+    const [ai, transcription] = await Promise.all([loadSettings(), loadTranscriptionSettings()]);
+    const maskedClaudeKey = ai.claudeApiKey
+      ? `••••••••${ai.claudeApiKey.slice(-4)}`
       : '';
-    res.json({ ...s, claudeApiKey: maskedKey });
+    const maskedAssemblyKey = transcription.assemblyaiApiKey
+      ? `••••••••${transcription.assemblyaiApiKey.slice(-4)}`
+      : '';
+    res.json({
+      ...ai,
+      claudeApiKey:          maskedClaudeKey,
+      transcriptionProvider: transcription.provider,
+      whisperModel:          transcription.whisperModel,
+      assemblyaiApiKey:      maskedAssemblyKey,
+    });
   } catch (err) {
     next(err);
   }
@@ -21,7 +30,10 @@ export async function getSettings(req: Request, res: Response, next: NextFunctio
 /** PUT /api/settings — update one or more settings */
 export async function updateSettings(req: Request, res: Response, next: NextFunction) {
   try {
-    const allowed = ['ai_provider', 'claude_api_key', 'claude_model', 'ollama_base_url', 'ollama_model'];
+    const allowed = [
+      'ai_provider', 'claude_api_key', 'claude_model', 'ollama_base_url', 'ollama_model',
+      'transcription_provider', 'whisper_model', 'assemblyai_api_key',
+    ];
     const body = req.body as Record<string, string>;
 
     for (const [key, value] of Object.entries(body)) {

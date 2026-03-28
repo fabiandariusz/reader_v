@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import VideoPlayer   from '@/components/VideoPlayer';
 import NoteItem      from '@/components/NoteItem';
@@ -8,6 +8,7 @@ import { useVideo }  from '@/hooks/useVideos';
 import { useNotes }  from '@/hooks/useNotes';
 import { useTags }   from '@/hooks/useTags';
 import { formatTime, formatDate } from '@/utils/time';
+import { transcriptionApi, type TranscriptStatus } from '@/api/transcription';
 import type Player from 'video.js/dist/types/player';
 
 type SideTab = 'notes' | 'ai';
@@ -24,9 +25,35 @@ export default function PlayerPage() {
   } = useNotes(videoId);
   const { tags: allTags, createTag } = useTags();
 
-  const [currentTime, setCurrentTime] = useState(0);
-  const [sideTab,     setSideTab]     = useState<SideTab>('notes');
+  const [currentTime,      setCurrentTime]      = useState(0);
+  const [sideTab,          setSideTab]          = useState<SideTab>('notes');
+  const [transcriptStatus, setTranscriptStatus] = useState<TranscriptStatus>({ status: 'none' });
   const playerRef = useRef<Player | null>(null);
+
+  // Load transcript status on mount and poll while processing
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      const s = await transcriptionApi.get(videoId).catch(() => ({ status: 'none' as const }));
+      if (!cancelled) setTranscriptStatus(s);
+      if (!cancelled && s.status === 'processing') {
+        setTimeout(check, 4000);
+      }
+    };
+    check();
+    return () => { cancelled = true; };
+  }, [videoId]);
+
+  const handleTranscribe = useCallback(async () => {
+    setTranscriptStatus({ status: 'processing' });
+    await transcriptionApi.start(videoId);
+    const poll = async () => {
+      const s = await transcriptionApi.get(videoId).catch(() => ({ status: 'none' as const }));
+      setTranscriptStatus(s);
+      if (s.status === 'processing') setTimeout(poll, 4000);
+    };
+    setTimeout(poll, 4000);
+  }, [videoId]);
 
   const handlePlayerReady = useCallback((player: Player) => { playerRef.current = player; }, []);
   const handleTimeUpdate  = useCallback((time: number) => { setCurrentTime(time); }, []);
@@ -81,6 +108,35 @@ export default function PlayerPage() {
             {video.duration != null && <span>{formatTime(video.duration)}</span>}
             <span>{formatDate(video.created_at)}</span>
             {video.description && <span>{video.description}</span>}
+          </div>
+
+          <div className="transcript-bar">
+            {transcriptStatus.status === 'none' && (
+              <button className="btn btn--ghost btn--sm" onClick={handleTranscribe}>
+                ✦ Transcribe
+              </button>
+            )}
+            {transcriptStatus.status === 'processing' && (
+              <span className="transcript-bar__status">
+                <span className="spinner spinner--sm" /> Transcribing…
+              </span>
+            )}
+            {transcriptStatus.status === 'done' && (
+              <span className="transcript-bar__status transcript-bar__status--done">
+                ✓ Transcript ready — AI context enhanced
+                <button className="btn btn--ghost btn--sm" onClick={handleTranscribe} style={{ marginLeft: '0.5rem' }}>
+                  Re-transcribe
+                </button>
+              </span>
+            )}
+            {transcriptStatus.status === 'error' && (
+              <span className="transcript-bar__status transcript-bar__status--error">
+                Transcription failed: {transcriptStatus.error}
+                <button className="btn btn--ghost btn--sm" onClick={handleTranscribe} style={{ marginLeft: '0.5rem' }}>
+                  Retry
+                </button>
+              </span>
+            )}
           </div>
         </div>
       </div>

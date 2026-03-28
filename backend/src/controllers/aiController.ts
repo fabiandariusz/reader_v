@@ -30,8 +30,8 @@ function sseError(res: Response, message: string) {
 
 // ── Fetch video + notes ────────────────────────────────────────────────────
 
-async function fetchVideoNotes(videoId: number) {
-  const [videoRes, notesRes] = await Promise.all([
+async function fetchVideoContext(videoId: number) {
+  const [videoRes, notesRes, transcriptRes] = await Promise.all([
     pool.query<{ id: number; title: string; description: string | null }>(
       'SELECT id, title, description FROM videos WHERE id = $1', [videoId]
     ),
@@ -39,11 +39,19 @@ async function fetchVideoNotes(videoId: number) {
       'SELECT id, video_id, content, timestamp FROM notes WHERE video_id = $1 ORDER BY timestamp ASC',
       [videoId]
     ),
+    pool.query<{ content: string }>(
+      'SELECT content FROM transcripts WHERE video_id = $1',
+      [videoId]
+    ),
   ]);
 
   const video = videoRes.rows[0];
   if (!video) throw new Error('Video not found');
-  return { video, notes: notesRes.rows };
+  return {
+    video,
+    notes:      notesRes.rows,
+    transcript: transcriptRes.rows[0]?.content ?? null,
+  };
 }
 
 // ── POST /api/ai/summarize ────────────────────────────────────────────────
@@ -52,11 +60,11 @@ export async function streamSummary(req: Request, res: Response, _next: NextFunc
   sseHeaders(res);
   try {
     const videoId = Number(req.body.videoId);
-    const { video, notes } = await fetchVideoNotes(videoId);
+    const { video, notes, transcript } = await fetchVideoContext(videoId);
     const provider = await getProvider();
 
     const system = SYSTEM_BASE;
-    const prompt = summaryPrompt(video.title, video.description, notes);
+    const prompt = summaryPrompt(video.title, video.description, notes, transcript);
 
     let full = '';
     for await (const token of provider.stream(system, prompt)) {
@@ -84,11 +92,11 @@ export async function streamConcepts(req: Request, res: Response, _next: NextFun
   sseHeaders(res);
   try {
     const videoId = Number(req.body.videoId);
-    const { video, notes } = await fetchVideoNotes(videoId);
+    const { video, notes, transcript } = await fetchVideoContext(videoId);
     const provider = await getProvider();
 
     const system = SYSTEM_BASE;
-    const prompt = conceptsPrompt(video.title, notes);
+    const prompt = conceptsPrompt(video.title, notes, transcript);
 
     let full = '';
     for await (const token of provider.stream(system, prompt)) {
@@ -108,11 +116,11 @@ export async function streamQuiz(req: Request, res: Response, _next: NextFunctio
   sseHeaders(res);
   try {
     const videoId = Number(req.body.videoId);
-    const { video, notes } = await fetchVideoNotes(videoId);
+    const { video, notes, transcript } = await fetchVideoContext(videoId);
     const provider = await getProvider();
 
     const system = SYSTEM_BASE;
-    const prompt = quizPrompt(video.title, notes);
+    const prompt = quizPrompt(video.title, notes, transcript);
 
     let full = '';
     for await (const token of provider.stream(system, prompt)) {
@@ -157,10 +165,10 @@ export async function streamChat(req: Request, res: Response, _next: NextFunctio
       history: { role: 'user' | 'assistant'; content: string }[];
     };
 
-    const { video, notes } = await fetchVideoNotes(videoId);
+    const { video, notes, transcript } = await fetchVideoContext(videoId);
     const provider = await getProvider();
 
-    const { system, prompt } = chatPrompt(video.title, notes, history, message);
+    const { system, prompt } = chatPrompt(video.title, notes, history, message, transcript);
 
     let full = '';
     for await (const token of provider.stream(system, prompt)) {
