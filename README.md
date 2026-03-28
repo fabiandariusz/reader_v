@@ -20,6 +20,10 @@ An educational video learning app with timestamped note-taking. Watch videos and
 | AI provider abstraction (Claude + Ollama) | Done |
 | AI features — summary, concepts, quiz, chat | Done |
 | Settings page (AI config UI) | Done |
+| Video file serving (HTTP Range streaming) | Done |
+| Tags UI — add/remove tags on notes | Done |
+| Transcript pipeline (Whisper + AssemblyAI) | Done |
+| Development request logging (morgan) | Done |
 
 ---
 
@@ -30,6 +34,7 @@ An educational video learning app with timestamped note-taking. Watch videos and
 - **Database** — PostgreSQL (primary), Redis (cache)
 - **Styling** — Custom CSS system, black/white theme
 - **AI** — Claude API (`@anthropic-ai/sdk`) or Ollama (local LLM), user-configurable
+- **Transcription** — Whisper (local, via Python) or AssemblyAI (cloud), user-configurable
 
 ---
 
@@ -50,10 +55,11 @@ reader_v/
 └── backend/
     └── src/
         ├── ai/             # types, claude.ts, ollama.ts, factory.ts, prompts.ts
-        ├── controllers/    # video, note, tag, settings, ai controllers
+        ├── transcription/  # types, whisper.ts, assemblyai.ts, factory.ts
+        ├── controllers/    # video, note, tag, settings, ai, transcription controllers
         ├── db/             # pool.ts (pg), redis.ts, schema.sql, init.ts
         ├── middleware/     # errorHandler, notFound
-        └── routes/         # /api/videos, /api/notes, /api/tags, /api/settings, /api/ai
+        └── routes/         # /api/videos, /api/notes, /api/tags, /api/settings, /api/ai, /api/transcription
 ```
 
 ---
@@ -86,6 +92,9 @@ reader_v/
 | POST | `/api/ai/chat` | Stream chat response (SSE) |
 | GET | `/api/ai/summary/:videoId` | Get cached summary |
 | GET | `/api/ai/quiz/:videoId` | Get cached quiz |
+| GET | `/api/videos/:id/stream` | Stream local video file (HTTP Range) |
+| GET | `/api/transcription/:videoId` | Get transcript status / content |
+| POST | `/api/transcription/:videoId` | Start transcription job |
 
 ---
 
@@ -96,6 +105,8 @@ reader_v/
 - Node.js 18+
 - PostgreSQL running locally
 - Redis running locally (optional — app degrades gracefully without it)
+- For Whisper transcription: Python 3 + `pip install openai-whisper`
+- For AssemblyAI transcription: an AssemblyAI API key (configured in Settings)
 
 ### Setup
 
@@ -132,6 +143,19 @@ cd frontend && npm run dev   # http://localhost:5173
 ---
 
 ## Development Log
+
+### 2026-03-29 — Transcript pipeline
+- Dual transcription providers: Whisper (local Python) and AssemblyAI (cloud REST API)
+- Same abstraction pattern as AI providers — swap in Settings, zero code changes
+- Background async job with polling: `POST` to start, `GET` to check status every 4s
+- Transcript stored in new `transcripts` table (`content` + `segments` JSONB)
+- All four AI features (summary, concepts, quiz, chat) now inject transcript into the prompt when available, falling back to notes-only if no transcript exists yet
+- Settings page extended with transcription provider toggle, Whisper model selector, and AssemblyAI key input
+
+### 2026-03-28 — Tags UI + file serving + dev logging
+- Tags UI: each note now has a `+ tag` inline input with native datalist autocomplete; find-or-create logic in PlayerPage keeps NoteItem simple
+- Video file serving: `GET /api/videos/:id/stream` with HTTP 206 Range support — required for Video.js seeking; only DB-registered files are served
+- Development request logging via `morgan` (`dev` format, disabled in production)
 
 ### 2026-03-27 — AI feature + Settings page
 - Added AI provider abstraction supporting Claude API and Ollama (local LLM)
