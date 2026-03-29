@@ -173,17 +173,15 @@ export default function SettingsPage() {
             </div>
             <div className="form-group">
               <label className="form-label" htmlFor="openai-model">Model</label>
-              <select
+              <input
                 id="openai-model"
                 className="form-input"
-                value={form.openaiModel ?? 'gpt-4o'}
+                type="text"
+                placeholder="gpt-4o"
+                value={form.openaiModel ?? ''}
                 onChange={(e) => set('openaiModel', e.target.value)}
-              >
-                <option value="gpt-4o">GPT-4o (recommended)</option>
-                <option value="gpt-4o-mini">GPT-4o Mini (faster)</option>
-                <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                <option value="o3-mini">o3-mini</option>
-              </select>
+              />
+              <span className="settings-hint">e.g. gpt-4o, gpt-4o-mini, o3, o4-mini</span>
             </div>
           </div>
         )}
@@ -207,17 +205,15 @@ export default function SettingsPage() {
             </div>
             <div className="form-group">
               <label className="form-label" htmlFor="gemini-model">Model</label>
-              <select
+              <input
                 id="gemini-model"
                 className="form-input"
-                value={form.geminiModel ?? 'gemini-2.0-flash'}
+                type="text"
+                placeholder="gemini-2.0-flash"
+                value={form.geminiModel ?? ''}
                 onChange={(e) => set('geminiModel', e.target.value)}
-              >
-                <option value="gemini-2.0-flash">Gemini 2.0 Flash (recommended)</option>
-                <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite (fastest)</option>
-                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-              </select>
+              />
+              <span className="settings-hint">e.g. gemini-2.0-flash, gemini-2.5-pro, gemini-1.5-flash</span>
             </div>
           </div>
         )}
