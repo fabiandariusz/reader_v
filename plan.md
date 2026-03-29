@@ -134,6 +134,27 @@ directly by hooks and surfaces cleanly to the UI.
 
 ---
 
+## 2026-03-29 — Search
+
+### Decision 20 — ILIKE search across notes and video titles, single endpoint
+**Choice:** `GET /api/search?q=<query>` — joins `notes`, `videos`, `note_tags`, and `tags`
+using `ILIKE '%query%'` on `notes.content` and `videos.title`. Returns up to 50 results
+ordered by video recency then note timestamp. No schema migration needed.
+
+**Response shape:** `[{ note_id, note_content, note_timestamp, video_id, video_title, thumbnail_path, tags }]`
+
+**UI:** Search input in the Header (right-aligned, 220px). Submitting navigates to
+`/search?q=...`. The `SearchPage` reads `?q` from the URL via `useSearchParams`, fires
+the API on change, and renders a result list — each card shows the video thumbnail,
+video title, note content (2-line clamp), tags, and a timestamp chip. Clicking navigates
+to `/player/:videoId`.
+
+**Trade-off:** ILIKE does a full table scan on large note sets. For a local single-user
+app this is fine. A `pg_trgm` GIN index could be added later for sub-millisecond search
+if the note volume grows.
+
+---
+
 ## 2026-03-29 — Notes Export
 
 ### Decision 19 — Server-side export via GET /api/videos/:id/export?format=md|txt|pdf
@@ -342,7 +363,7 @@ improving context quality regardless of note volume.
 | ~~Thumbnail generation~~ | ~~Auto-generate from video frame, or user-supplied path?~~ | ~~Medium~~ — **Done** |
 | ~~Export~~ | ~~Should notes be exportable (markdown, PDF)?~~ | ~~Low~~ — **Done** |
 | ~~Export~~ | ~~Should notes be exportable (markdown, PDF)?~~ | ~~Low~~ — **Done** |
-| Search | Full-text search across notes? | Low |
+| ~~Search~~ | ~~Full-text search across notes?~~ | ~~Low~~ — **Done** |
 | Auth | Full plan doc includes auth — still deferred for local app | Low |
 | ~~File serving~~ | ~~How are local video files served to Video.js?~~ | ~~High~~ — **Done** |
 | ~~Transcript pipeline~~ | ~~Whisper or AssemblyAI for auto-transcription~~ | ~~High~~ — **Done** |

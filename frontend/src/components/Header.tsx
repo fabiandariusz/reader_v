@@ -1,6 +1,16 @@
-import { NavLink } from 'react-router-dom';
+import { useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
 
 export default function Header() {
+  const navigate = useNavigate();
+  const [query, setQuery] = useState('');
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = query.trim();
+    if (q) navigate(`/search?q=${encodeURIComponent(q)}`);
+  };
+
   return (
     <header className="header">
       <span className="header__logo">Reader V</span>
@@ -19,6 +29,15 @@ export default function Header() {
           Settings
         </NavLink>
       </nav>
+      <form className="header__search" onSubmit={handleSearch}>
+        <input
+          className="header__search-input"
+          type="search"
+          placeholder="Search notes…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </form>
     </header>
   );
 }

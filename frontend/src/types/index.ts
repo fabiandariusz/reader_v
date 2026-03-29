@@ -25,6 +25,16 @@ export interface Tag {
   name: string;
 }
 
+export interface SearchResult {
+  note_id: number;
+  note_content: string;
+  note_timestamp: number;
+  video_id: number;
+  video_title: string;
+  thumbnail_path: string | null;
+  tags: Tag[];
+}
+
 export interface ApiError {
   message: string;
   status?: number;

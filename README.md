@@ -26,6 +26,7 @@ An educational video learning app with timestamped note-taking. Watch videos and
 | Development request logging (morgan) | Done |
 | Thumbnail generation (ffmpeg frame extraction) | Done |
 | Notes export (Markdown, Plain text, PDF) | Done |
+| Full-text search across notes | Done |
 | Unit tests (Jest + Vitest) | Done |
 
 ---
@@ -101,6 +102,7 @@ reader_v/
 | GET | `/api/videos/:id/stream` | Stream local video file (HTTP Range) |
 | POST | `/api/videos/:id/thumbnail` | Regenerate thumbnail for a video |
 | GET | `/api/videos/:id/export` | Export notes as `?format=md\|txt\|pdf` |
+| GET | `/api/search` | Search notes by content or video title (`?q=...`) |
 | GET | `/api/transcription/:videoId` | Get transcript status / content |
 | POST | `/api/transcription/:videoId` | Start transcription job |
 
