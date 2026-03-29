@@ -134,6 +134,46 @@ directly by hooks and surfaces cleanly to the UI.
 
 ---
 
+## 2026-03-29 — Fabric AI Integration
+
+### Decision 25 — Fabric patterns via direct SDK calls, no CLI dependency
+**Choice:** Read patterns from `~/.config/fabric/patterns/` directly (each pattern is a directory containing `system.md`). Stream responses using the already-installed SDKs (OpenAI, Anthropic, Gemini, Ollama) based on `~/.config/fabric/.env`. No dependency on the `fabric` binary being in PATH.
+
+**Rationale:** The user has Fabric v1.4.186 installed with 217 patterns. The binary was not on PATH in the app's process. Reading pattern files directly is simpler, faster, and removes a brittle subprocess dependency. The `.env` config file is the same source of truth Fabric itself uses.
+
+**Provider dispatch:** `DEFAULT_VENDOR` in `~/.config/fabric/.env` determines which SDK is used — `OpenAI` → openai SDK, `Anthropic` → @anthropic-ai/sdk, `Google` → @google/generative-ai, `Ollama` → fetch to local API. All stream token-by-token via SSE.
+
+**Input options:** User selects either the video transcript or all notes (formatted as `[mm:ss] content`) as input to the pattern. Backend fetches from DB before streaming.
+
+**UI:** New `⬡ Fabric` tab in the AI panel (alongside Summary, Concepts, Quiz, Chat). Searchable pattern dropdown (80 shown, filters as you type). Transcript/Notes toggle. Output streams into the same `ai-output` display.
+
+**Settings:** Dedicated `⬡ Fabric AI` card in Settings — vendor selector (OpenAI/Anthropic/Google/Ollama), model free-text, API key (masked), Ollama URL. Writes directly to `~/.config/fabric/.env`.
+
+**Endpoints added:** `GET /api/fabric/patterns`, `GET /api/fabric/config`, `PUT /api/fabric/config`, `POST /api/fabric/run` (SSE).
+
+---
+
+### Decision 26 — Online video support and file upload
+**Choice:** `file_path` field accepts both local filesystem paths and HTTP URLs. A new `POST /api/videos/upload` endpoint accepts `multipart/form-data` via multer, saves files to `uploads/videos/`, and stores the absolute path. YouTube URLs use `videojs-youtube` tech with `techOrder: ['youtube']`.
+
+**UI:** Add Video modal redesigned with two tabs — Upload File (drag-drop zone + file picker, title auto-filled from filename) and Online URL (text input for YouTube or direct video links).
+
+---
+
+### Decision 27 — AI providers expanded to four
+**Choice:** Claude, OpenAI, Gemini (Google), and Ollama are all supported as AI providers. OpenAI and Gemini use free-text model inputs rather than dropdowns to avoid stale model lists.
+
+**Transcription providers expanded to three:** Whisper (local Python 3.8–3.11), OpenAI Whisper API (cloud, reuses `openai_api_key`), AssemblyAI (cloud).
+
+---
+
+### Decision 28 — Custom video controls and resizable panel
+**Choice:** A custom controls bar below the Video.js player provides skip ±10s buttons and a 0.5×–2× speed selector, operating on the Video.js player instance directly. A drag handle between the video area and notes sidebar allows resizing (240–600px range) via `mousedown`/`mousemove` on `window`.
+
+**Rationale:** Video.js built-in controls don't expose skip/speed in the default skin without plugins. A minimal custom bar is simpler and matches the app's design system.
+
+---
+
 ## 2026-03-29 — Search
 
 ### Decision 20 — ILIKE search across notes and video titles, single endpoint
@@ -365,6 +405,9 @@ improving context quality regardless of note volume.
 | ~~Export~~ | ~~Should notes be exportable (markdown, PDF)?~~ | ~~Low~~ — **Done** |
 | ~~Search~~ | ~~Full-text search across notes?~~ | ~~Low~~ — **Done** |
 | Auth | Full plan doc includes auth — still deferred for local app | Low |
+| ~~Fabric AI~~ | ~~Integrate Daniel Miessler's Fabric pattern library~~ | ~~Medium~~ — **Done** |
+| ~~Online video~~ | ~~Support YouTube and direct video URLs~~ | ~~Medium~~ — **Done** |
+| ~~AI providers~~ | ~~Support OpenAI and Gemini alongside Claude/Ollama~~ | ~~Medium~~ — **Done** |
 | ~~File serving~~ | ~~How are local video files served to Video.js?~~ | ~~High~~ — **Done** |
 | ~~Transcript pipeline~~ | ~~Whisper or AssemblyAI for auto-transcription~~ | ~~High~~ — **Done** |
 | ~~Tags UI~~ | ~~Adding tags to notes from the UI not yet wired~~ | ~~Medium~~ — **Done** |
