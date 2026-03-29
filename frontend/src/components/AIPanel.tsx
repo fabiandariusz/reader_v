@@ -1,13 +1,22 @@
 import { useState, useEffect } from 'react';
 import { useAIStream } from '@/hooks/useAIStream';
 import { aiApi, type QuizQuestion } from '@/api/ai';
-import AIChat from './AIChat';
+import AIChat       from './AIChat';
+import FabricPanel  from './FabricPanel';
 
-type Tab = 'summary' | 'concepts' | 'quiz' | 'chat';
+type Tab = 'summary' | 'concepts' | 'quiz' | 'chat' | 'fabric';
 
 interface Props {
   videoId: number;
 }
+
+const TAB_LABELS: Record<Tab, string> = {
+  summary:  'Summary',
+  concepts: 'Concepts',
+  quiz:     'Quiz',
+  chat:     'Chat',
+  fabric:   '⬡ Fabric',
+};
 
 export default function AIPanel({ videoId }: Props) {
   const [tab, setTab] = useState<Tab>('summary');
@@ -15,13 +24,13 @@ export default function AIPanel({ videoId }: Props) {
   return (
     <div className="ai-panel">
       <div className="ai-panel__tabs">
-        {(['summary', 'concepts', 'quiz', 'chat'] as Tab[]).map((t) => (
+        {(Object.keys(TAB_LABELS) as Tab[]).map((t) => (
           <button
             key={t}
             className={`ai-tab${tab === t ? ' ai-tab--active' : ''}`}
             onClick={() => setTab(t)}
           >
-            {t.charAt(0).toUpperCase() + t.slice(1)}
+            {TAB_LABELS[t]}
           </button>
         ))}
       </div>
@@ -30,7 +39,8 @@ export default function AIPanel({ videoId }: Props) {
         {tab === 'summary'  && <SummaryTab  videoId={videoId} />}
         {tab === 'concepts' && <ConceptsTab videoId={videoId} />}
         {tab === 'quiz'     && <QuizTab     videoId={videoId} />}
-        {tab === 'chat'     && <AIChat      videoId={videoId} />}
+        {tab === 'chat'     && <AIChat       videoId={videoId} />}
+        {tab === 'fabric'   && <FabricPanel  videoId={videoId} />}
       </div>
     </div>
   );

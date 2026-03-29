@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { settingsApi, type AISettings } from '@/api/settings';
+import { fabricApi, type FabricConfig } from '@/api/fabric';
 import { useSettings } from '@/hooks/useSettings';
 
 const PROVIDERS: { id: AISettings['provider']; label: string }[] = [
@@ -21,6 +22,24 @@ export default function SettingsPage() {
   const [testing, setTesting] = useState(false);
   const [testMsg, setTestMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [saveMsg, setSaveMsg] = useState('');
+
+  // Fabric state
+  const [fabricCfg,      setFabricCfg]      = useState<FabricConfig | null>(null);
+  const [fabricVendor,   setFabricVendor]   = useState('');
+  const [fabricModel,    setFabricModel]    = useState('');
+  const [fabricApiKey,   setFabricApiKey]   = useState('');
+  const [fabricOllama,   setFabricOllama]   = useState('');
+  const [fabricSaveMsg,  setFabricSaveMsg]  = useState('');
+  const [fabricSaving,   setFabricSaving]   = useState(false);
+
+  useEffect(() => {
+    fabricApi.getConfig().then((cfg) => {
+      setFabricCfg(cfg);
+      setFabricVendor(cfg.vendor);
+      setFabricModel(cfg.model);
+      setFabricOllama(cfg.ollamaUrl);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (settings) {
@@ -94,6 +113,28 @@ export default function SettingsPage() {
       setTestMsg({ ok: false, text: (err as { message?: string }).message ?? 'Connection failed.' });
     } finally {
       setTesting(false);
+    }
+  };
+
+  const handleFabricSave = async () => {
+    setFabricSaving(true);
+    setFabricSaveMsg('');
+    try {
+      await fabricApi.saveConfig({
+        vendor:    fabricVendor  || undefined,
+        model:     fabricModel   || undefined,
+        apiKey:    (fabricApiKey && !fabricApiKey.startsWith('•')) ? fabricApiKey : undefined,
+        ollamaUrl: fabricOllama  || undefined,
+      });
+      setFabricSaveMsg('Fabric settings saved.');
+      setFabricApiKey('');
+      const fresh = await fabricApi.getConfig();
+      setFabricCfg(fresh);
+    } catch {
+      setFabricSaveMsg('Failed to save Fabric settings.');
+    } finally {
+      setFabricSaving(false);
+      setTimeout(() => setFabricSaveMsg(''), 3000);
     }
   };
 
@@ -339,6 +380,87 @@ export default function SettingsPage() {
             {saveMsg && <span className="settings-save-msg">{saveMsg}</span>}
             <button className="btn btn--primary" onClick={handleSave} disabled={saving || testing}>
               {saving ? 'Saving…' : 'Save Settings'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Fabric Settings ─────────────────────────────── */}
+      <div className="settings-card" style={{ marginTop: '1.5rem' }}>
+        <h1 className="settings-title">
+          ⬡ Fabric AI
+          {fabricCfg && (
+            <span className="settings-hint" style={{ marginLeft: '0.75rem', fontWeight: 400 }}>
+              {fabricCfg.patternsFound} patterns found
+            </span>
+          )}
+        </h1>
+
+        <div className="settings-section">
+          <div className="settings-section__label">Provider</div>
+          <div className="provider-toggle">
+            {['OpenAI', 'Anthropic', 'Google', 'Ollama'].map((v) => (
+              <button
+                key={v}
+                className={`provider-btn${fabricVendor === v ? ' provider-btn--active' : ''}`}
+                onClick={() => { setFabricVendor(v); setFabricApiKey(''); }}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="settings-section">
+          <div className="settings-section__label">Configuration</div>
+
+          <div className="form-group">
+            <label className="form-label" htmlFor="fabric-model">Model</label>
+            <input
+              id="fabric-model"
+              className="form-input"
+              type="text"
+              placeholder="e.g. gpt-4o, claude-opus-4-6, gemini-2.0-flash"
+              value={fabricModel}
+              onChange={(e) => setFabricModel(e.target.value)}
+            />
+          </div>
+
+          {fabricVendor !== 'Ollama' && (
+            <div className="form-group">
+              <label className="form-label" htmlFor="fabric-key">API Key</label>
+              <input
+                id="fabric-key"
+                className="form-input"
+                type="password"
+                placeholder={fabricCfg?.apiKeyMasked || 'Enter API key…'}
+                value={fabricApiKey}
+                onChange={(e) => setFabricApiKey(e.target.value)}
+                autoComplete="off"
+              />
+            </div>
+          )}
+
+          {fabricVendor === 'Ollama' && (
+            <div className="form-group">
+              <label className="form-label" htmlFor="fabric-ollama">Ollama URL</label>
+              <input
+                id="fabric-ollama"
+                className="form-input"
+                type="text"
+                value={fabricOllama}
+                onChange={(e) => setFabricOllama(e.target.value)}
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="settings-actions">
+          <div />
+          <div className="settings-actions__right">
+            {fabricSaveMsg && <span className="settings-save-msg">{fabricSaveMsg}</span>}
+            <button className="btn btn--primary" onClick={handleFabricSave} disabled={fabricSaving}>
+              {fabricSaving ? 'Saving…' : 'Save Fabric Settings'}
             </button>
           </div>
         </div>

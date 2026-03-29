@@ -10,6 +10,7 @@ import settingsRoutes from './routes/settings';
 import aiRoutes            from './routes/ai';
 import transcriptionRoutes from './routes/transcription';
 import searchRoutes        from './routes/search';
+import fabricRoutes        from './routes/fabric';
 import { errorHandler, notFound } from './middleware/errorHandler';
 
 const app  = express();
@@ -30,6 +31,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/ai',            aiRoutes);
 app.use('/api/transcription', transcriptionRoutes);
 app.use('/api/search',        searchRoutes);
+app.use('/api/fabric',        fabricRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
