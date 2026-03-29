@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import VideoPlayer   from '@/components/VideoPlayer';
 import NoteItem      from '@/components/NoteItem';
@@ -43,7 +43,53 @@ export default function PlayerPage() {
   const [sideTab,          setSideTab]          = useState<SideTab>('notes');
   const [transcriptStatus, setTranscriptStatus] = useState<TranscriptStatus>({ status: 'none' });
   const [exportOpen,       setExportOpen]       = useState(false);
-  const playerRef = useRef<Player | null>(null);
+  const [speed,            setSpeed]            = useState(1);
+  const [sidebarWidth,     setSidebarWidth]     = useState(340);
+  const playerRef    = useRef<Player | null>(null);
+  const dragging     = useRef(false);
+  const dragStartX   = useRef(0);
+  const dragStartW   = useRef(340);
+
+  // Resize handle drag logic
+  const onDividerMouseDown = useCallback((e: React.MouseEvent) => {
+    dragging.current  = true;
+    dragStartX.current = e.clientX;
+    dragStartW.current = sidebarWidth;
+    document.body.style.cursor     = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, [sidebarWidth]);
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!dragging.current) return;
+      const delta = dragStartX.current - e.clientX;
+      setSidebarWidth(Math.min(600, Math.max(240, dragStartW.current + delta)));
+    };
+    const onUp = () => {
+      dragging.current = false;
+      document.body.style.cursor     = '';
+      document.body.style.userSelect = '';
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup',   onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup',   onUp);
+    };
+  }, []);
+
+  const SPEEDS = useMemo(() => [0.5, 0.75, 1, 1.25, 1.5, 2], []);
+
+  const handleSkip = useCallback((delta: number) => {
+    const p = playerRef.current;
+    if (!p) return;
+    p.currentTime(Math.max(0, (p.currentTime() ?? 0) + delta));
+  }, []);
+
+  const handleSpeedChange = useCallback((s: number) => {
+    setSpeed(s);
+    playerRef.current?.playbackRate(s);
+  }, []);
 
   // Load transcript status on mount and poll while processing
   useEffect(() => {
@@ -117,6 +163,30 @@ export default function PlayerPage() {
           onTimeUpdate={handleTimeUpdate}
           onPlayerReady={handlePlayerReady}
         />
+
+        {/* Custom video controls */}
+        <div className="video-controls">
+          <div className="video-controls__group">
+            <button className="video-controls__btn" onClick={() => handleSkip(-10)} title="Back 10s">
+              ↺ 10s
+            </button>
+            <button className="video-controls__btn" onClick={() => handleSkip(10)} title="Forward 10s">
+              ↻ 10s
+            </button>
+          </div>
+          <div className="video-controls__group video-controls__speed">
+            <span className="video-controls__label">Speed</span>
+            {SPEEDS.map((s) => (
+              <button
+                key={s}
+                className={`video-controls__btn${speed === s ? ' video-controls__btn--active' : ''}`}
+                onClick={() => handleSpeedChange(s)}
+              >
+                {s === 1 ? '1×' : `${s}×`}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="player-meta">
           <button
             className="btn btn--ghost btn--sm"
@@ -163,8 +233,11 @@ export default function PlayerPage() {
         </div>
       </div>
 
+      {/* Resize handle */}
+      <div className="panel-divider" onMouseDown={onDividerMouseDown} />
+
       {/* Right — tabbed sidebar */}
-      <aside className="note-panel">
+      <aside className="note-panel" style={{ width: sidebarWidth, minWidth: sidebarWidth }}>
         {/* Tab bar */}
         <div className="note-panel__header">
           <div className="side-tabs">

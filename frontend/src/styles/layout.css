@@ -415,3 +415,72 @@
   font-size: var(--text-xs);
   color: var(--color-text-faint);
 }
+
+/* ── Panel resize divider ───────────────────────────────── */
+.panel-divider {
+  width: 4px;
+  flex-shrink: 0;
+  background: transparent;
+  cursor: col-resize;
+  transition: background var(--transition-fast);
+  position: relative;
+  z-index: 1;
+}
+
+.panel-divider:hover,
+.panel-divider:active {
+  background: var(--color-border-strong);
+}
+
+/* ── Custom video controls ──────────────────────────────── */
+.video-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.video-controls__group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.video-controls__label {
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+  margin-right: var(--space-1);
+}
+
+.video-controls__btn {
+  padding: 3px var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+  white-space: nowrap;
+}
+
+.video-controls__btn:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+
+.video-controls__btn--active {
+  background: var(--color-accent);
+  color: #fff;
+  border-color: var(--color-accent);
+}
+
+.video-controls__speed {
+  margin-left: auto;
+}

@@ -17,16 +17,24 @@ export default function VideoPlayer({ src, onTimeUpdate, onPlayerReady }: Props)
   useEffect(() => {
     if (!videoRef.current) return;
 
+    const isYT   = isYouTube(src);
+    const type   = inferType(src);
+
     const videoEl = document.createElement('video');
     videoEl.className = 'video-js vjs-theme-custom';
     videoRef.current.appendChild(videoEl);
 
     const player = videojs(videoEl, {
-      controls: true,
+      controls:   true,
       responsive: true,
-      fluid: false,
-      preload: 'metadata',
-      sources: [{ src, type: inferType(src) }],
+      fluid:      false,
+      preload:    'metadata',
+      techOrder:  isYT ? ['youtube'] : ['html5'],
+      sources:    [{ src, type }],
+      // YouTube-specific options
+      ...(isYT && {
+        youtube: { ytControls: 0, rel: 0, modestbranding: 1 },
+      }),
     });
 
     playerRef.current = player;
@@ -58,11 +66,15 @@ export default function VideoPlayer({ src, onTimeUpdate, onPlayerReady }: Props)
   return <div className="video-player-wrap" ref={videoRef} />;
 }
 
+function isYouTube(src: string) {
+  return /youtube\.com|youtu\.be/.test(src);
+}
+
 function inferType(src: string): string {
-  if (/youtube\.com|youtu\.be/.test(src)) return 'video/youtube';
+  if (isYouTube(src)) return 'video/youtube';
   if (src.endsWith('.mp4') || src.includes('.mp4?')) return 'video/mp4';
   if (src.endsWith('.webm')) return 'video/webm';
-  if (src.endsWith('.ogg')) return 'video/ogg';
+  if (src.endsWith('.ogg'))  return 'video/ogg';
   if (src.endsWith('.m3u8')) return 'application/x-mpegURL';
   return 'video/mp4';
 }
