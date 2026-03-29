@@ -1,11 +1,15 @@
 import client from './client';
 
 export interface AISettings {
-  provider:               'claude' | 'ollama';
+  provider:               'claude' | 'ollama' | 'openai' | 'gemini';
   claudeApiKey:           string;
   claudeModel:            string;
   ollamaBaseUrl:          string;
   ollamaModel:            string;
+  openaiApiKey:           string;
+  openaiModel:            string;
+  geminiApiKey:           string;
+  geminiModel:            string;
   transcriptionProvider:  'whisper' | 'assemblyai';
   whisperModel:           string;
   assemblyaiApiKey:       string;

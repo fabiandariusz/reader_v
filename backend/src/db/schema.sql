@@ -67,7 +67,11 @@ INSERT INTO settings (key, value) VALUES
   ('claude_api_key', ''),
   ('claude_model',   'claude-opus-4-6'),
   ('ollama_base_url','http://localhost:11434'),
-  ('ollama_model',   'llama3.2')
+  ('ollama_model',   'llama3.2'),
+  ('openai_api_key', ''),
+  ('openai_model',   'gpt-4o'),
+  ('gemini_api_key', ''),
+  ('gemini_model',   'gemini-2.0-flash')
 ON CONFLICT (key) DO NOTHING;
 
 -- AI-generated summaries

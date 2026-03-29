@@ -2,12 +2,21 @@ import { useState, useEffect } from 'react';
 import { settingsApi, type AISettings } from '@/api/settings';
 import { useSettings } from '@/hooks/useSettings';
 
+const PROVIDERS: { id: AISettings['provider']; label: string }[] = [
+  { id: 'claude',  label: '◆ Claude (Anthropic)' },
+  { id: 'openai',  label: '⬡ OpenAI'             },
+  { id: 'gemini',  label: '✦ Gemini (Google)'     },
+  { id: 'ollama',  label: '⬡ Ollama (Local)'      },
+];
+
 export default function SettingsPage() {
   const { settings, loading, error: loadError, save } = useSettings();
 
-  const [form, setForm] = useState<Partial<AISettings>>({});
-  const [apiKeyInput,      setApiKeyInput]      = useState('');
-  const [assemblyKeyInput, setAssemblyKeyInput] = useState('');
+  const [form, setForm]                   = useState<Partial<AISettings>>({});
+  const [claudeKeyInput,  setClaudeKey]   = useState('');
+  const [openaiKeyInput,  setOpenaiKey]   = useState('');
+  const [geminiKeyInput,  setGeminiKey]   = useState('');
+  const [assemblyKeyInput, setAssemblyKey] = useState('');
   const [saving,  setSaving]  = useState(false);
   const [testing, setTesting] = useState(false);
   const [testMsg, setTestMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -20,6 +29,8 @@ export default function SettingsPage() {
         claudeModel:           settings.claudeModel,
         ollamaBaseUrl:         settings.ollamaBaseUrl,
         ollamaModel:           settings.ollamaModel,
+        openaiModel:           settings.openaiModel,
+        geminiModel:           settings.geminiModel,
         transcriptionProvider: settings.transcriptionProvider,
         whisperModel:          settings.whisperModel,
       });
@@ -34,23 +45,26 @@ export default function SettingsPage() {
     setSaveMsg('');
     try {
       const payload: Record<string, string> = {
-        ai_provider:             form.provider              ?? 'claude',
-        claude_model:            form.claudeModel           ?? 'claude-opus-4-6',
-        ollama_base_url:         form.ollamaBaseUrl         ?? 'http://localhost:11434',
-        ollama_model:            form.ollamaModel           ?? 'llama3.2',
-        transcription_provider:  form.transcriptionProvider ?? 'whisper',
-        whisper_model:           form.whisperModel          ?? 'base',
+        ai_provider:            form.provider              ?? 'claude',
+        claude_model:           form.claudeModel           ?? 'claude-opus-4-6',
+        ollama_base_url:        form.ollamaBaseUrl         ?? 'http://localhost:11434',
+        ollama_model:           form.ollamaModel           ?? 'llama3.2',
+        openai_model:           form.openaiModel           ?? 'gpt-4o',
+        gemini_model:           form.geminiModel           ?? 'gemini-2.0-flash',
+        transcription_provider: form.transcriptionProvider ?? 'whisper',
+        whisper_model:          form.whisperModel          ?? 'base',
       };
-      if (apiKeyInput && !apiKeyInput.startsWith('•')) {
-        payload.claude_api_key = apiKeyInput;
-      }
-      if (assemblyKeyInput && !assemblyKeyInput.startsWith('•')) {
-        payload.assemblyai_api_key = assemblyKeyInput;
-      }
+      if (claudeKeyInput  && !claudeKeyInput.startsWith('•'))  payload.claude_api_key  = claudeKeyInput;
+      if (openaiKeyInput  && !openaiKeyInput.startsWith('•'))  payload.openai_api_key  = openaiKeyInput;
+      if (geminiKeyInput  && !geminiKeyInput.startsWith('•'))  payload.gemini_api_key  = geminiKeyInput;
+      if (assemblyKeyInput && !assemblyKeyInput.startsWith('•')) payload.assemblyai_api_key = assemblyKeyInput;
+
       await save(payload);
       setSaveMsg('Settings saved.');
-      setApiKeyInput('');
-      setAssemblyKeyInput('');
+      setClaudeKey('');
+      setOpenaiKey('');
+      setGeminiKey('');
+      setAssemblyKey('');
     } catch {
       setSaveMsg('Failed to save settings.');
     } finally {
@@ -63,21 +77,21 @@ export default function SettingsPage() {
     setTesting(true);
     setTestMsg(null);
     try {
-      const apiKey = (apiKeyInput && !apiKeyInput.startsWith('•'))
-        ? apiKeyInput
-        : settings?.claudeApiKey ?? '';
-
+      const provider = form.provider ?? 'claude';
       const result = await settingsApi.test({
-        provider:      form.provider ?? 'claude',
-        claudeApiKey:  apiKey,
+        provider,
+        claudeApiKey:  (claudeKeyInput && !claudeKeyInput.startsWith('•'))   ? claudeKeyInput  : settings?.claudeApiKey,
         claudeModel:   form.claudeModel,
         ollamaBaseUrl: form.ollamaBaseUrl,
         ollamaModel:   form.ollamaModel,
+        openaiApiKey:  (openaiKeyInput && !openaiKeyInput.startsWith('•'))   ? openaiKeyInput  : settings?.openaiApiKey,
+        openaiModel:   form.openaiModel,
+        geminiApiKey:  (geminiKeyInput && !geminiKeyInput.startsWith('•'))   ? geminiKeyInput  : settings?.geminiApiKey,
+        geminiModel:   form.geminiModel,
       });
       setTestMsg({ ok: result.ok, text: result.message });
     } catch (err: unknown) {
-      const msg = (err as { message?: string }).message ?? 'Connection failed.';
-      setTestMsg({ ok: false, text: msg });
+      setTestMsg({ ok: false, text: (err as { message?: string }).message ?? 'Connection failed.' });
     } finally {
       setTesting(false);
     }
@@ -95,13 +109,13 @@ export default function SettingsPage() {
         <div className="settings-section">
           <div className="settings-section__label">AI Provider</div>
           <div className="provider-toggle">
-            {(['claude', 'ollama'] as const).map((p) => (
+            {PROVIDERS.map(({ id, label }) => (
               <button
-                key={p}
-                className={`provider-btn${form.provider === p ? ' provider-btn--active' : ''}`}
-                onClick={() => { set('provider', p); setTestMsg(null); }}
+                key={id}
+                className={`provider-btn${form.provider === id ? ' provider-btn--active' : ''}`}
+                onClick={() => { set('provider', id); setTestMsg(null); }}
               >
-                {p === 'claude' ? '◆ Claude (Anthropic)' : '⬡ Ollama (Local)'}
+                {label}
               </button>
             ))}
           </div>
@@ -118,14 +132,11 @@ export default function SettingsPage() {
                 className="form-input"
                 type="password"
                 placeholder={settings?.claudeApiKey || 'sk-ant-api…'}
-                value={apiKeyInput}
-                onChange={(e) => setApiKeyInput(e.target.value)}
+                value={claudeKeyInput}
+                onChange={(e) => setClaudeKey(e.target.value)}
                 autoComplete="off"
               />
-              <span className="settings-hint">
-                Get your key at{' '}
-                <span className="settings-link">console.anthropic.com</span>
-              </span>
+              <span className="settings-hint">Get your key at <span className="settings-link">console.anthropic.com</span></span>
             </div>
             <div className="form-group">
               <label className="form-label" htmlFor="claude-model">Model</label>
@@ -138,6 +149,74 @@ export default function SettingsPage() {
                 <option value="claude-opus-4-6">Claude Opus 4.6 (recommended)</option>
                 <option value="claude-sonnet-4-6">Claude Sonnet 4.6</option>
                 <option value="claude-haiku-4-5">Claude Haiku 4.5 (fastest)</option>
+              </select>
+            </div>
+          </div>
+        )}
+
+        {/* OpenAI settings */}
+        {form.provider === 'openai' && (
+          <div className="settings-section">
+            <div className="settings-section__label">OpenAI Configuration</div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="openai-key">API Key</label>
+              <input
+                id="openai-key"
+                className="form-input"
+                type="password"
+                placeholder={settings?.openaiApiKey || 'sk-…'}
+                value={openaiKeyInput}
+                onChange={(e) => setOpenaiKey(e.target.value)}
+                autoComplete="off"
+              />
+              <span className="settings-hint">Get your key at <span className="settings-link">platform.openai.com</span></span>
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="openai-model">Model</label>
+              <select
+                id="openai-model"
+                className="form-input"
+                value={form.openaiModel ?? 'gpt-4o'}
+                onChange={(e) => set('openaiModel', e.target.value)}
+              >
+                <option value="gpt-4o">GPT-4o (recommended)</option>
+                <option value="gpt-4o-mini">GPT-4o Mini (faster)</option>
+                <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                <option value="o3-mini">o3-mini</option>
+              </select>
+            </div>
+          </div>
+        )}
+
+        {/* Gemini settings */}
+        {form.provider === 'gemini' && (
+          <div className="settings-section">
+            <div className="settings-section__label">Gemini Configuration</div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="gemini-key">API Key</label>
+              <input
+                id="gemini-key"
+                className="form-input"
+                type="password"
+                placeholder={settings?.geminiApiKey || 'AIza…'}
+                value={geminiKeyInput}
+                onChange={(e) => setGeminiKey(e.target.value)}
+                autoComplete="off"
+              />
+              <span className="settings-hint">Get your key at <span className="settings-link">aistudio.google.com</span></span>
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="gemini-model">Model</label>
+              <select
+                id="gemini-model"
+                className="form-input"
+                value={form.geminiModel ?? 'gemini-2.0-flash'}
+                onChange={(e) => set('geminiModel', e.target.value)}
+              >
+                <option value="gemini-2.0-flash">Gemini 2.0 Flash (recommended)</option>
+                <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite (fastest)</option>
+                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
               </select>
             </div>
           </div>
@@ -167,9 +246,7 @@ export default function SettingsPage() {
                 value={form.ollamaModel ?? ''}
                 onChange={(e) => set('ollamaModel', e.target.value)}
               />
-              <span className="settings-hint">
-                Pull a model first: <code>ollama pull llama3.2</code>
-              </span>
+              <span className="settings-hint">Pull a model first: <code>ollama pull llama3.2</code></span>
             </div>
           </div>
         )}
@@ -223,7 +300,7 @@ export default function SettingsPage() {
                 type="password"
                 placeholder={settings?.assemblyaiApiKey || 'Enter AssemblyAI API key…'}
                 value={assemblyKeyInput}
-                onChange={(e) => setAssemblyKeyInput(e.target.value)}
+                onChange={(e) => setAssemblyKey(e.target.value)}
                 autoComplete="off"
               />
               <span className="settings-hint">Get your key at <span className="settings-link">assemblyai.com</span></span>
@@ -233,27 +310,17 @@ export default function SettingsPage() {
 
         {/* Test result */}
         {testMsg && (
-          <div className={testMsg.ok ? 'settings-ok' : 'error-banner'}>
-            {testMsg.text}
-          </div>
+          <div className={testMsg.ok ? 'settings-ok' : 'error-banner'}>{testMsg.text}</div>
         )}
 
         {/* Actions */}
         <div className="settings-actions">
-          <button
-            className="btn btn--secondary"
-            onClick={handleTest}
-            disabled={testing || saving}
-          >
+          <button className="btn btn--secondary" onClick={handleTest} disabled={testing || saving}>
             {testing ? 'Testing…' : 'Test Connection'}
           </button>
           <div className="settings-actions__right">
             {saveMsg && <span className="settings-save-msg">{saveMsg}</span>}
-            <button
-              className="btn btn--primary"
-              onClick={handleSave}
-              disabled={saving || testing}
-            >
+            <button className="btn btn--primary" onClick={handleSave} disabled={saving || testing}>
               {saving ? 'Saving…' : 'Save Settings'}
             </button>
           </div>

@@ -1,9 +1,13 @@
 export interface AISettings {
-  provider:      'claude' | 'ollama';
+  provider:      'claude' | 'ollama' | 'openai' | 'gemini';
   claudeApiKey:  string;
   claudeModel:   string;
   ollamaBaseUrl: string;
   ollamaModel:   string;
+  openaiApiKey:  string;
+  openaiModel:   string;
+  geminiApiKey:  string;
+  geminiModel:   string;
 }
 
 export interface AIProvider {

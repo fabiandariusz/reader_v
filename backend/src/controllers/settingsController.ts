@@ -4,23 +4,22 @@ import { loadSettings } from '../ai/factory';
 import { loadTranscriptionSettings } from '../transcription/factory';
 import { ClaudeProvider } from '../ai/claude';
 import { OllamaProvider } from '../ai/ollama';
+import { OpenAIProvider } from '../ai/openai';
+import { GeminiProvider } from '../ai/gemini';
 
 /** GET /api/settings — returns all settings, masking the API key */
 export async function getSettings(req: Request, res: Response, next: NextFunction) {
   try {
     const [ai, transcription] = await Promise.all([loadSettings(), loadTranscriptionSettings()]);
-    const maskedClaudeKey = ai.claudeApiKey
-      ? `••••••••${ai.claudeApiKey.slice(-4)}`
-      : '';
-    const maskedAssemblyKey = transcription.assemblyaiApiKey
-      ? `••••••••${transcription.assemblyaiApiKey.slice(-4)}`
-      : '';
+    const mask = (key: string) => key ? `••••••••${key.slice(-4)}` : '';
     res.json({
       ...ai,
-      claudeApiKey:          maskedClaudeKey,
+      claudeApiKey:          mask(ai.claudeApiKey),
+      openaiApiKey:          mask(ai.openaiApiKey),
+      geminiApiKey:          mask(ai.geminiApiKey),
       transcriptionProvider: transcription.provider,
       whisperModel:          transcription.whisperModel,
-      assemblyaiApiKey:      maskedAssemblyKey,
+      assemblyaiApiKey:      mask(transcription.assemblyaiApiKey),
     });
   } catch (err) {
     next(err);
@@ -32,6 +31,7 @@ export async function updateSettings(req: Request, res: Response, next: NextFunc
   try {
     const allowed = [
       'ai_provider', 'claude_api_key', 'claude_model', 'ollama_base_url', 'ollama_model',
+      'openai_api_key', 'openai_model', 'gemini_api_key', 'gemini_model',
       'transcription_provider', 'whisper_model', 'assemblyai_api_key',
     ];
     const body = req.body as Record<string, string>;
@@ -55,24 +55,27 @@ export async function updateSettings(req: Request, res: Response, next: NextFunc
 /** POST /api/settings/test — test connectivity for the current or submitted provider */
 export async function testConnection(req: Request, res: Response, next: NextFunction) {
   try {
-    const { provider, claudeApiKey, claudeModel, ollamaBaseUrl, ollamaModel } =
+    const { provider, claudeApiKey, claudeModel, ollamaBaseUrl, ollamaModel,
+            openaiApiKey, openaiModel, geminiApiKey, geminiModel } =
       req.body as {
         provider: string;
-        claudeApiKey?: string;
-        claudeModel?: string;
-        ollamaBaseUrl?: string;
-        ollamaModel?: string;
+        claudeApiKey?: string;  claudeModel?: string;
+        ollamaBaseUrl?: string; ollamaModel?: string;
+        openaiApiKey?: string;  openaiModel?: string;
+        geminiApiKey?: string;  geminiModel?: string;
       };
 
     if (provider === 'ollama') {
-      const p = new OllamaProvider(ollamaBaseUrl, ollamaModel);
-      await p.test();
+      await new OllamaProvider(ollamaBaseUrl, ollamaModel).test();
+    } else if (provider === 'openai') {
+      if (!openaiApiKey) return res.status(400).json({ message: 'API key required for OpenAI.' });
+      await new OpenAIProvider(openaiApiKey, openaiModel).test();
+    } else if (provider === 'gemini') {
+      if (!geminiApiKey) return res.status(400).json({ message: 'API key required for Gemini.' });
+      await new GeminiProvider(geminiApiKey, geminiModel).test();
     } else {
-      if (!claudeApiKey) {
-        return res.status(400).json({ message: 'API key required for Claude.' });
-      }
-      const p = new ClaudeProvider(claudeApiKey, claudeModel);
-      await p.test();
+      if (!claudeApiKey) return res.status(400).json({ message: 'API key required for Claude.' });
+      await new ClaudeProvider(claudeApiKey, claudeModel).test();
     }
 
     res.json({ ok: true, message: 'Connection successful.' });
