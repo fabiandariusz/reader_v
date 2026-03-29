@@ -17,28 +17,31 @@ An educational video learning app with timestamped note-taking. Watch videos and
 | Database schema (PostgreSQL) | Done |
 | Redis caching layer | Done |
 | Auth | Not required (local app) |
-| AI provider abstraction (Claude + Ollama) | Done |
+| AI provider abstraction (Claude, OpenAI, Gemini, Ollama) | Done |
 | AI features — summary, concepts, quiz, chat | Done |
 | Settings page (AI config UI) | Done |
 | Video file serving (HTTP Range streaming) | Done |
+| Online video support (YouTube + direct URLs) | Done |
+| Drag-and-drop / file picker video upload | Done |
 | Tags UI — add/remove tags on notes | Done |
-| Transcript pipeline (Whisper + AssemblyAI) | Done |
+| Transcript pipeline (Whisper, OpenAI Whisper, AssemblyAI) | Done |
 | Development request logging (morgan) | Done |
 | Thumbnail generation (ffmpeg frame extraction) | Done |
 | Notes export (Markdown, Plain text, PDF) | Done |
 | Full-text search across notes | Done |
+| Video controls (skip ±10s, playback speed, resizable panel) | Done |
 | Unit tests (Jest + Vitest) | Done |
 
 ---
 
 ## Tech Stack
 
-- **Frontend** — React 18, TypeScript, Vite, React Router v6, Video.js, Axios
-- **Backend** — Node.js, Express, TypeScript, ts-node-dev
+- **Frontend** — React 18, TypeScript, Vite 8, React Router v6, Video.js, videojs-youtube, Axios
+- **Backend** — Node.js, Express, TypeScript, ts-node-dev, multer
 - **Database** — PostgreSQL (primary), Redis (cache)
 - **Styling** — Custom CSS system, black/white theme
-- **AI** — Claude API (`@anthropic-ai/sdk`) or Ollama (local LLM), user-configurable
-- **Transcription** — Whisper (local, via Python) or AssemblyAI (cloud), user-configurable
+- **AI** — Claude (`@anthropic-ai/sdk`), OpenAI (`openai`), Gemini (`@google/generative-ai`), or Ollama (local LLM) — user-configurable
+- **Transcription** — Whisper (local Python), OpenAI Whisper API (cloud), or AssemblyAI (cloud) — user-configurable
 
 ---
 
@@ -58,15 +61,16 @@ reader_v/
 │       └── utils/          # Time formatting helpers
 └── backend/
     └── src/
-        ├── ai/             # types, claude.ts, ollama.ts, factory.ts, prompts.ts
-        ├── transcription/  # types, whisper.ts, assemblyai.ts, factory.ts
+        ├── ai/             # types, claude.ts, openai.ts, gemini.ts, ollama.ts, factory.ts, prompts.ts
+        ├── transcription/  # types, whisper.ts, openaiWhisper.ts, assemblyai.ts, factory.ts
         ├── services/       # thumbnailService.ts (ffmpeg frame extraction)
         ├── controllers/    # video, note, tag, settings, ai, transcription controllers
         ├── db/             # pool.ts (pg), redis.ts, schema.sql, init.ts
         ├── middleware/     # errorHandler, notFound
-        └── routes/         # /api/videos, /api/notes, /api/tags, /api/settings, /api/ai, /api/transcription
+        └── routes/         # /api/videos, /api/notes, /api/tags, /api/settings, /api/ai, /api/transcription, /api/search
     uploads/
-    └── thumbnails/         # Generated JPEG thumbnails served at /thumbnails/:id.jpg
+    ├── thumbnails/         # Generated JPEG thumbnails served at /thumbnails/:id.jpg
+    └── videos/             # Uploaded video files (drag-and-drop / file picker)
 ```
 
 ---
@@ -77,7 +81,8 @@ reader_v/
 |---|---|---|
 | GET | `/api/videos` | List all videos (with note counts) |
 | GET | `/api/videos/:id` | Get single video |
-| POST | `/api/videos` | Add a video |
+| POST | `/api/videos` | Add a video by file path or URL |
+| POST | `/api/videos/upload` | Upload a video file (multipart/form-data) |
 | PUT | `/api/videos/:id` | Update video title/description |
 | DELETE | `/api/videos/:id` | Delete video + cascade notes |
 | GET | `/api/notes?videoId=x` | List notes for a video |
@@ -116,8 +121,10 @@ reader_v/
 - PostgreSQL running locally
 - Redis running locally (optional — app degrades gracefully without it)
 - `ffmpeg` installed on the host system (for thumbnail generation) — `brew install ffmpeg`
-- For Whisper transcription: Python 3 + `pip install openai-whisper`
+- For local Whisper transcription: Python 3.8–3.11 + `pip install openai-whisper`
+- For OpenAI Whisper / OpenAI AI provider: an OpenAI API key (configured in Settings)
 - For AssemblyAI transcription: an AssemblyAI API key (configured in Settings)
+- For Gemini AI provider: a Google AI Studio API key (configured in Settings)
 
 ### Setup
 
@@ -157,6 +164,17 @@ npm test
 ---
 
 ## Development Log
+
+### 2026-03-29 — AI providers, transcription, video controls, and upload
+
+- AI providers expanded to four: Claude (Anthropic), OpenAI, Gemini (Google), Ollama (local)
+- OpenAI and Gemini model fields are free-text inputs — enter any model name
+- Transcription expanded to three providers: Whisper (local Python), OpenAI Whisper API (cloud, reuses OpenAI key), AssemblyAI (cloud)
+- Add Video modal redesigned: drag-and-drop zone, click-to-browse file picker (uploads to `uploads/videos/`), and Online URL tab for YouTube and direct video links
+- YouTube playback fixed: `techOrder: ['youtube']` passed to Video.js when source is a YouTube URL
+- Custom video controls bar: skip ±10s, playback speed (0.5×–2×)
+- Resizable notes panel: drag the divider between video and sidebar (240–600px)
+- Full-text search added: `GET /api/search?q=...` with a search input in the header
 
 ### 2026-03-29 — Transcript pipeline
 - Dual transcription providers: Whisper (local Python) and AssemblyAI (cloud REST API)
