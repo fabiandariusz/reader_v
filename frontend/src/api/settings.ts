@@ -10,7 +10,7 @@ export interface AISettings {
   openaiModel:            string;
   geminiApiKey:           string;
   geminiModel:            string;
-  transcriptionProvider:  'whisper' | 'assemblyai';
+  transcriptionProvider:  'whisper' | 'assemblyai' | 'openai-whisper';
   whisperModel:           string;
   assemblyaiApiKey:       string;
 }

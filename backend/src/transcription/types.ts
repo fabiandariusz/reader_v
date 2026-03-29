@@ -14,7 +14,8 @@ export interface TranscriptionProvider {
 }
 
 export interface TranscriptionSettings {
-  provider:         'whisper' | 'assemblyai';
+  provider:         'whisper' | 'assemblyai' | 'openai-whisper';
   whisperModel:     string;
   assemblyaiApiKey: string;
+  openaiApiKey:     string;
 }

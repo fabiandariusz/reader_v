@@ -255,15 +255,24 @@ export default function SettingsPage() {
         <div className="settings-section">
           <div className="settings-section__label">Transcription Provider</div>
           <div className="provider-toggle">
-            {(['whisper', 'assemblyai'] as const).map((p) => (
-              <button
-                key={p}
-                className={`provider-btn${form.transcriptionProvider === p ? ' provider-btn--active' : ''}`}
-                onClick={() => set('transcriptionProvider', p)}
-              >
-                {p === 'whisper' ? '🎙 Whisper (Local)' : '☁ AssemblyAI (Cloud)'}
-              </button>
-            ))}
+            <button
+              className={`provider-btn${form.transcriptionProvider === 'whisper' ? ' provider-btn--active' : ''}`}
+              onClick={() => set('transcriptionProvider', 'whisper')}
+            >
+              🎙 Whisper (Local)
+            </button>
+            <button
+              className={`provider-btn${form.transcriptionProvider === 'openai-whisper' ? ' provider-btn--active' : ''}`}
+              onClick={() => set('transcriptionProvider', 'openai-whisper')}
+            >
+              ⬡ OpenAI Whisper (Cloud)
+            </button>
+            <button
+              className={`provider-btn${form.transcriptionProvider === 'assemblyai' ? ' provider-btn--active' : ''}`}
+              onClick={() => set('transcriptionProvider', 'assemblyai')}
+            >
+              ☁ AssemblyAI (Cloud)
+            </button>
           </div>
         </div>
 
@@ -284,7 +293,19 @@ export default function SettingsPage() {
                 <option value="medium">medium</option>
                 <option value="large">large (slowest, most accurate)</option>
               </select>
-              <span className="settings-hint">Requires Python 3 + <code>pip install openai-whisper</code></span>
+              <span className="settings-hint">Requires Python 3.8–3.11 + <code>pip install openai-whisper</code></span>
+            </div>
+          </div>
+        )}
+
+        {form.transcriptionProvider === 'openai-whisper' && (
+          <div className="settings-section">
+            <div className="settings-section__label">OpenAI Whisper Configuration</div>
+            <div className="form-group">
+              <span className="settings-hint">
+                Uses the <strong>OpenAI API key</strong> configured above under AI Provider → OpenAI.
+                Model: <code>whisper-1</code>. No local Python required.
+              </span>
             </div>
           </div>
         )}
