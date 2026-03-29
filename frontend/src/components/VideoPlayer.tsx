@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import videojs from 'video.js';
 import 'video.js/dist/video-js.css';
+import 'videojs-youtube';
 import type Player from 'video.js/dist/types/player';
 
 interface Props {
@@ -58,7 +59,8 @@ export default function VideoPlayer({ src, onTimeUpdate, onPlayerReady }: Props)
 }
 
 function inferType(src: string): string {
-  if (src.endsWith('.mp4')) return 'video/mp4';
+  if (/youtube\.com|youtu\.be/.test(src)) return 'video/youtube';
+  if (src.endsWith('.mp4') || src.includes('.mp4?')) return 'video/mp4';
   if (src.endsWith('.webm')) return 'video/webm';
   if (src.endsWith('.ogg')) return 'video/ogg';
   if (src.endsWith('.m3u8')) return 'application/x-mpegURL';

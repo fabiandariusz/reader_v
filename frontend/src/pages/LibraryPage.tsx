@@ -2,10 +2,13 @@ import { useState } from 'react';
 import VideoCard from '@/components/VideoCard';
 import AddVideoModal from '@/components/AddVideoModal';
 import { useVideos } from '@/hooks/useVideos';
+import type { Video } from '@/types';
 
 export default function LibraryPage() {
-  const { videos, loading, error, addVideo, removeVideo } = useVideos();
+  const { videos, loading, error, addVideo, removeVideo, reload } = useVideos();
   const [showModal, setShowModal] = useState(false);
+
+  const handleCreated = (_video: Video) => reload();
 
   if (loading) {
     return (
@@ -51,7 +54,11 @@ export default function LibraryPage() {
       )}
 
       {showModal && (
-        <AddVideoModal onSave={addVideo} onClose={() => setShowModal(false)} />
+        <AddVideoModal
+          onSave={addVideo}
+          onClose={() => setShowModal(false)}
+          onCreated={handleCreated}
+        />
       )}
     </div>
   );

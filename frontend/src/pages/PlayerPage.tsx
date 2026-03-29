@@ -113,7 +113,7 @@ export default function PlayerPage() {
       {/* Left — video + meta */}
       <div className="player-main">
         <VideoPlayer
-          src={`/api/videos/${videoId}/stream`}
+          src={video.file_path.startsWith('http') ? video.file_path : `/api/videos/${videoId}/stream`}
           onTimeUpdate={handleTimeUpdate}
           onPlayerReady={handlePlayerReady}
         />

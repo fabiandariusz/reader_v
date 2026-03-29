@@ -1,12 +1,54 @@
 import type { Request, Response, NextFunction } from 'express';
 import fs from 'fs';
 import path from 'path';
+import multer from 'multer';
 import PDFDocument from 'pdfkit';
 import pool from '../db/pool';
 import redis from '../db/redis';
 import { generateThumbnail } from '../services/thumbnailService';
 
 const CACHE_TTL = 30; // seconds
+
+const VIDEOS_DIR = path.join(__dirname, '../../uploads/videos');
+fs.mkdirSync(VIDEOS_DIR, { recursive: true });
+
+export const videoUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, VIDEOS_DIR),
+    filename: (_req, file, cb) => {
+      const safe = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+      cb(null, `${Date.now()}-${safe}`);
+    },
+  }),
+  fileFilter: (_req, file, cb) => {
+    cb(null, file.mimetype.startsWith('video/'));
+  },
+});
+
+export async function uploadVideo(req: Request, res: Response, next: NextFunction) {
+  try {
+    if (!req.file) return res.status(400).json({ message: 'No video file provided' });
+
+    const rawTitle = (req.body.title as string | undefined)?.trim();
+    const title = rawTitle || req.file.originalname.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
+    const description = (req.body.description as string | undefined)?.trim() || null;
+    const filePath = req.file.path;
+
+    const { rows } = await pool.query<Record<string, unknown>>(`
+      INSERT INTO videos (title, file_path, description)
+      VALUES ($1, $2, $3)
+      RETURNING *
+    `, [title, filePath, description]);
+
+    await redis.del('videos:all').catch(() => null);
+    const video = rows[0];
+    res.status(201).json({ ...video, note_count: 0 });
+
+    generateThumbnail(video.id as number, video.file_path as string);
+  } catch (err) {
+    next(err);
+  }
+}
 
 export async function listVideos(req: Request, res: Response, next: NextFunction) {
   try {

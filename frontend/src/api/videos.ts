@@ -19,4 +19,14 @@ export const videosApi = {
 
   exportNotes: (id: number, format: 'md' | 'txt' | 'pdf') =>
     client.get(`/videos/${id}/export`, { params: { format }, responseType: 'blob' }).then((r) => r.data as Blob),
+
+  upload: (file: File, title?: string, description?: string) => {
+    const form = new FormData();
+    form.append('file', file);
+    if (title) form.append('title', title);
+    if (description) form.append('description', description);
+    return client.post<Video>('/videos/upload', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then((r) => r.data);
+  },
 };
