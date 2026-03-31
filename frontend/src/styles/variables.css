@@ -58,6 +58,10 @@
   /* Layout */
   --sidebar-width:     340px;
   --header-height:     52px;
+
+  /* Video player dimensions — change these to resize the player */
+  --player-width:      100%;   /* e.g. 800px, 75%, 100% */
+  --player-max-height: 58vh;   /* e.g. 480px, 60vh        */
   --radius-sm:         3px;
   --radius-md:         5px;
   --radius-lg:         8px;
