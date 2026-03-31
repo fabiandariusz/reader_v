@@ -30,6 +30,7 @@ An educational video learning app with timestamped note-taking. Watch videos and
 | Notes export (Markdown, Plain text, PDF) | Done |
 | Full-text search across notes | Done |
 | Video controls (skip ±10s, playback speed, resizable panel) | Done |
+| Fabric AI pattern integration (217 patterns, searchable) | Done |
 | Unit tests (Jest + Vitest) | Done |
 
 ---
@@ -41,6 +42,7 @@ An educational video learning app with timestamped note-taking. Watch videos and
 - **Database** — PostgreSQL (primary), Redis (cache)
 - **Styling** — Custom CSS system, black/white theme
 - **AI** — Claude (`@anthropic-ai/sdk`), OpenAI (`openai`), Gemini (`@google/generative-ai`), or Ollama (local LLM) — user-configurable
+- **Fabric AI** — [Daniel Miessler's Fabric](https://github.com/danielmiessler/fabric) pattern library (reads patterns from `~/.config/fabric/patterns/`, dispatches to whichever SDK is configured in `~/.config/fabric/.env`)
 - **Transcription** — Whisper (local Python), OpenAI Whisper API (cloud), or AssemblyAI (cloud) — user-configurable
 
 ---
@@ -110,6 +112,10 @@ reader_v/
 | GET | `/api/search` | Search notes by content or video title (`?q=...`) |
 | GET | `/api/transcription/:videoId` | Get transcript status / content |
 | POST | `/api/transcription/:videoId` | Start transcription job |
+| GET | `/api/fabric/patterns` | List available Fabric patterns |
+| GET | `/api/fabric/config` | Get Fabric provider config (key masked) |
+| PUT | `/api/fabric/config` | Update Fabric provider config |
+| POST | `/api/fabric/run` | Run a Fabric pattern on transcript or notes (SSE) |
 
 ---
 
@@ -164,6 +170,15 @@ npm test
 ---
 
 ## Development Log
+
+### 2026-03-29 — Fabric AI integration
+
+- New `⬡ Fabric` tab in the AI panel alongside Summary, Concepts, Quiz, and Chat
+- Reads patterns directly from `~/.config/fabric/patterns/` — no `fabric` binary required
+- 217 patterns available; searchable dropdown (80 shown, filters as you type)
+- Input toggle: run a pattern against the video transcript or all timestamped notes
+- Provider dispatch reads `DEFAULT_VENDOR` from `~/.config/fabric/.env` and routes to the matching SDK (OpenAI, Anthropic, Google, Ollama) — all stream token-by-token via SSE
+- Dedicated `⬡ Fabric AI` settings card: vendor selector, model free-text, API key (masked), Ollama URL — writes directly to `~/.config/fabric/.env`
 
 ### 2026-03-29 — AI providers, transcription, video controls, and upload
 
