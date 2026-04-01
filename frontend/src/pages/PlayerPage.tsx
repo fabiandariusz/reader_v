@@ -46,30 +46,35 @@ export default function PlayerPage() {
   const [exportOpen,       setExportOpen]       = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(340);
   const [player,       setPlayer]       = useState<Player | null>(null);
-  const playerRef = useRef<Player | null>(null);
-  const dragging     = useRef(false);
-  const dragStartX   = useRef(0);
-  const dragStartW   = useRef(340);
+  const playerRef  = useRef<Player | null>(null);
+  const sidebarRef = useRef<HTMLElement>(null);
+  const dragging   = useRef(false);
+  const dragStartX = useRef(0);
+  const dragStartW = useRef(340);
 
-  // Resize handle drag logic
+  // Resize handle — direct DOM updates during drag to avoid re-renders
   const onDividerMouseDown = useCallback((e: React.MouseEvent) => {
-    dragging.current  = true;
+    e.preventDefault();
+    dragging.current   = true;
     dragStartX.current = e.clientX;
-    dragStartW.current = sidebarWidth;
+    dragStartW.current = sidebarRef.current?.offsetWidth ?? 340;
     document.body.style.cursor     = 'col-resize';
     document.body.style.userSelect = 'none';
-  }, [sidebarWidth]);
+  }, []);
 
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
-      if (!dragging.current) return;
-      const delta = dragStartX.current - e.clientX;
-      setSidebarWidth(Math.min(600, Math.max(240, dragStartW.current + delta)));
+      if (!dragging.current || !sidebarRef.current) return;
+      const w = Math.min(600, Math.max(240, dragStartW.current + (dragStartX.current - e.clientX)));
+      sidebarRef.current.style.width    = `${w}px`;
+      sidebarRef.current.style.minWidth = `${w}px`;
     };
     const onUp = () => {
+      if (!dragging.current) return;
       dragging.current = false;
       document.body.style.cursor     = '';
       document.body.style.userSelect = '';
+      if (sidebarRef.current) setSidebarWidth(sidebarRef.current.offsetWidth);
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup',   onUp);
@@ -202,7 +207,7 @@ export default function PlayerPage() {
       <div className="panel-divider" onMouseDown={onDividerMouseDown} />
 
       {/* Right — tabbed sidebar */}
-      <aside className="note-panel" style={{ width: sidebarWidth, minWidth: sidebarWidth }}>
+      <aside className="note-panel" ref={sidebarRef} style={{ width: sidebarWidth, minWidth: sidebarWidth }}>
         {/* Tab bar */}
         <div className="note-panel__header">
           <div className="side-tabs">
