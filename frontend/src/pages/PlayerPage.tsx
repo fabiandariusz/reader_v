@@ -45,6 +45,8 @@ export default function PlayerPage() {
   const [exportOpen,       setExportOpen]       = useState(false);
   const [speed,            setSpeed]            = useState(1);
   const [sidebarWidth,     setSidebarWidth]     = useState(340);
+  const [playerWidthPct,   setPlayerWidthPct]   = useState(100);   // 30–100 %
+  const [playerHeightPx,   setPlayerHeightPx]   = useState(480);   // 200–800 px
   const playerRef    = useRef<Player | null>(null);
   const dragging     = useRef(false);
   const dragStartX   = useRef(0);
@@ -162,6 +164,8 @@ export default function PlayerPage() {
           src={video.file_path.startsWith('http') ? video.file_path : `/api/videos/${videoId}/stream`}
           onTimeUpdate={handleTimeUpdate}
           onPlayerReady={handlePlayerReady}
+          playerWidth={`${playerWidthPct}%`}
+          playerMaxHeight={`${playerHeightPx}px`}
         />
 
         {/* Custom video controls */}
@@ -185,6 +189,20 @@ export default function PlayerPage() {
                 {s === 1 ? '1×' : `${s}×`}
               </button>
             ))}
+          </div>
+
+          <div className="video-controls__group">
+            <span className="video-controls__label">W</span>
+            <button className="video-controls__btn" onClick={() => setPlayerWidthPct((w) => Math.max(30,  w - 10))} title="Decrease width">−</button>
+            <span className="video-controls__label">{playerWidthPct}%</span>
+            <button className="video-controls__btn" onClick={() => setPlayerWidthPct((w) => Math.min(100, w + 10))} title="Increase width">+</button>
+          </div>
+
+          <div className="video-controls__group">
+            <span className="video-controls__label">H</span>
+            <button className="video-controls__btn" onClick={() => setPlayerHeightPx((h) => Math.max(200, h - 50))} title="Decrease height">−</button>
+            <span className="video-controls__label">{playerHeightPx}px</span>
+            <button className="video-controls__btn" onClick={() => setPlayerHeightPx((h) => Math.min(800, h + 50))} title="Increase height">+</button>
           </div>
         </div>
         <div className="player-meta">

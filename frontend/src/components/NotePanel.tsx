@@ -1,27 +1,31 @@
 import NoteItem from './NoteItem';
 import NoteComposer from './NoteComposer';
-import type { Note } from '@/types';
+import type { Note, Tag } from '@/types';
 import type Player from 'video.js/dist/types/player';
 
 interface Props {
   notes: Note[];
+  allTags: Tag[];
   loading: boolean;
   currentTime: number;
   player: Player | null;
-  onAddNote: (content: string, timestamp: number) => Promise<void>;
-  onUpdateNote: (id: number, content: string) => Promise<void>;
+  onAddNote: (content: string, timestamp: number) => Promise<unknown>;
+  onUpdateNote: (id: number, content: string) => Promise<unknown>;
   onDeleteNote: (id: number) => Promise<void>;
+  onAddTag: (noteId: number, tagName: string) => Promise<void>;
   onRemoveTag: (noteId: number, tagId: number) => Promise<void>;
 }
 
 export default function NotePanel({
   notes,
+  allTags,
   loading,
   currentTime,
   player,
   onAddNote,
   onUpdateNote,
   onDeleteNote,
+  onAddTag,
   onRemoveTag,
 }: Props) {
   const handleSeek = (timestamp: number) => {
@@ -53,9 +57,11 @@ export default function NotePanel({
             <NoteItem
               key={note.id}
               note={note}
+              allTags={allTags}
               onSeek={handleSeek}
               onUpdate={onUpdateNote}
               onDelete={onDeleteNote}
+              onAddTag={onAddTag}
               onRemoveTag={onRemoveTag}
             />
           ))

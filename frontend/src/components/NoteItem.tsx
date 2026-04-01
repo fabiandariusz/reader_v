@@ -6,7 +6,7 @@ interface Props {
   note: Note;
   allTags: Tag[];
   onSeek: (timestamp: number) => void;
-  onUpdate: (id: number, content: string) => Promise<void>;
+  onUpdate: (id: number, content: string) => Promise<unknown>;
   onDelete: (id: number) => Promise<void>;
   onAddTag: (noteId: number, tagName: string) => Promise<void>;
   onRemoveTag: (noteId: number, tagId: number) => Promise<void>;

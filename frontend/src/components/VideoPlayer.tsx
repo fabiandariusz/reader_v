@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import videojs from 'video.js';
 import 'video.js/dist/video-js.css';
 import 'videojs-youtube';
@@ -8,9 +8,11 @@ interface Props {
   src: string;
   onTimeUpdate?: (currentTime: number) => void;
   onPlayerReady?: (player: Player) => void;
+  playerWidth?: string;
+  playerMaxHeight?: string;
 }
 
-export default function VideoPlayer({ src, onTimeUpdate, onPlayerReady }: Props) {
+export default function VideoPlayer({ src, onTimeUpdate, onPlayerReady, playerWidth, playerMaxHeight }: Props) {
   const videoRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<Player | null>(null);
 
@@ -63,7 +65,12 @@ export default function VideoPlayer({ src, onTimeUpdate, onPlayerReady }: Props)
     }
   }, [src]);
 
-  return <div className="video-player-wrap" ref={videoRef} />;
+  const wrapStyle = {
+    ...(playerWidth     ? { width: playerWidth } : {}),
+    ...(playerMaxHeight ? { '--player-max-height': playerMaxHeight } : {}),
+  } as React.CSSProperties;
+
+  return <div className="video-player-wrap" ref={videoRef} style={wrapStyle} />;
 }
 
 function isYouTube(src: string) {

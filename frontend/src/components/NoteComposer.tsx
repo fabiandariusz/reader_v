@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { formatTime } from '@/utils/time';
 
 interface Props {
   currentTime: number;
-  onSave: (content: string, timestamp: number) => Promise<void>;
+  onSave: (content: string, timestamp: number) => Promise<unknown>;
 }
 
 export default function NoteComposer({ currentTime, onSave }: Props) {
