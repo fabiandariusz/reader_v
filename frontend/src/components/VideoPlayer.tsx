@@ -27,9 +27,9 @@ export default function VideoPlayer({ src, onTimeUpdate, onPlayerReady, playerWi
     videoRef.current.appendChild(videoEl);
 
     const player = videojs(videoEl, {
-      controls:   false,
-      responsive: false,
-      fluid:      false,
+      controls: false,
+      fluid:    false,
+      fill:     true,
       preload:    'metadata',
       techOrder:  isYT ? ['youtube'] : ['html5'],
       sources:    [{ src, type }],

@@ -141,15 +141,16 @@
 
 /* ── Video Player wrapper ───────────────────────────────── */
 .video-player-wrap {
-  flex-shrink: 0;
+  flex: 1 1 0;
   background: #000;
   position: relative;
   width: var(--player-width);
+  min-height: 0;
 }
 
 .video-player-wrap .video-js {
   width: 100%;
-  max-height: var(--player-max-height);
+  height: 100%;
 }
 
 /* ── Note Item ──────────────────────────────────────────── */
