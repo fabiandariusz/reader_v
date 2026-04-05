@@ -820,6 +820,42 @@
   justify-content: center;
 }
 
+.settings-wrap {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--space-6);
+  gap: 0;
+}
+
+.settings-tab {
+  padding: var(--space-2) var(--space-5);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.settings-tab:hover {
+  color: var(--color-text);
+}
+
+.settings-tab--active {
+  color: var(--color-text);
+  border-bottom-color: var(--color-text);
+}
+
 .settings-card {
   width: 100%;
   max-width: 560px;
@@ -918,4 +954,34 @@
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
   color: #166534;
+}
+
+/* ── Pattern list (Fabric settings) ─────────────────────── */
+.pattern-list {
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+}
+
+.pattern-list__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.pattern-list__item:hover {
+  background: var(--color-bg-hover);
+}
+
+.pattern-list__item input[type="checkbox"] {
+  accent-color: var(--color-accent);
+  flex-shrink: 0;
+  cursor: pointer;
 }

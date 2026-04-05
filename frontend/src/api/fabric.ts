@@ -9,9 +9,25 @@ export interface FabricConfig {
   patternsFound: number;
 }
 
+export interface UpdateResult {
+  ok:      boolean;
+  added:   number;
+  updated: number;
+  total:   number;
+}
+
 export const fabricApi = {
   getPatterns: () =>
     client.get<string[]>('/fabric/patterns').then((r) => r.data),
+
+  getEnabledPatterns: () =>
+    client.get<string[]>('/fabric/patterns/enabled').then((r) => r.data),
+
+  saveEnabledPatterns: (patterns: string[]) =>
+    client.put<{ ok: boolean }>('/fabric/patterns/enabled', patterns).then((r) => r.data),
+
+  updatePatterns: () =>
+    client.post<UpdateResult>('/fabric/patterns/update').then((r) => r.data),
 
   getConfig: () =>
     client.get<FabricConfig>('/fabric/config').then((r) => r.data),

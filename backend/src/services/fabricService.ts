@@ -139,3 +139,45 @@ export async function* runPattern(
     throw new Error(`Unsupported Fabric vendor: "${cfg.DEFAULT_VENDOR}"`);
   }
 }
+
+// ── GitHub pattern updater ────────────────────────────────────────────────
+
+interface GHEntry { name: string; type: string }
+
+export async function updatePatternsFromGitHub(): Promise<{ added: number; updated: number; total: number }> {
+  const listRes = await fetch(
+    'https://api.github.com/repos/danielmiessler/fabric/contents/data/patterns',
+    { headers: { 'User-Agent': 'reader-v-app', Accept: 'application/vnd.github.v3+json' } },
+  );
+  if (!listRes.ok) throw new Error(`GitHub API error: ${listRes.status} ${listRes.statusText}`);
+  const entries = (await listRes.json()) as GHEntry[];
+  const patternDirs = entries.filter((e) => e.type === 'dir').map((e) => e.name);
+
+  fs.mkdirSync(PATTERNS_DIR, { recursive: true });
+
+  let added = 0;
+  let updated = 0;
+
+  const BATCH = 20;
+  for (let i = 0; i < patternDirs.length; i += BATCH) {
+    const batch = patternDirs.slice(i, i + BATCH);
+    await Promise.all(
+      batch.map(async (name) => {
+        const url = `https://raw.githubusercontent.com/danielmiessler/fabric/main/data/patterns/${encodeURIComponent(name)}/system.md`;
+        try {
+          const res = await fetch(url);
+          if (!res.ok) return;
+          const content = await res.text();
+          const dir  = path.join(PATTERNS_DIR, name);
+          const file = path.join(dir, 'system.md');
+          const isNew = !fs.existsSync(file);
+          fs.mkdirSync(dir, { recursive: true });
+          fs.writeFileSync(file, content, 'utf8');
+          if (isNew) added++; else updated++;
+        } catch { /* skip individual failures */ }
+      }),
+    );
+  }
+
+  return { added, updated, total: patternDirs.length };
+}

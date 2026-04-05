@@ -10,8 +10,11 @@ const PROVIDERS: { id: AISettings['provider']; label: string }[] = [
   { id: 'ollama',  label: '⬡ Ollama (Local)'      },
 ];
 
+type SettingsTab = 'general' | 'fabric';
+
 export default function SettingsPage() {
   const { settings, loading, error: loadError, save } = useSettings();
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>('general');
 
   const [form, setForm]                   = useState<Partial<AISettings>>({});
   const [claudeKeyInput,  setClaudeKey]   = useState('');
@@ -31,6 +34,13 @@ export default function SettingsPage() {
   const [fabricOllama,   setFabricOllama]   = useState('');
   const [fabricSaveMsg,  setFabricSaveMsg]  = useState('');
   const [fabricSaving,   setFabricSaving]   = useState(false);
+  const [allPatterns,      setAllPatterns]      = useState<string[]>([]);
+  const [enabledPatterns,  setEnabledPatterns]  = useState<string[] | null>(null);
+  const [patternSearch,    setPatternSearch]    = useState('');
+  const [patternSaving,    setPatternSaving]    = useState(false);
+  const [patternSaveMsg,   setPatternSaveMsg]   = useState('');
+  const [updating,         setUpdating]         = useState(false);
+  const [updateMsg,        setUpdateMsg]        = useState('');
 
   useEffect(() => {
     fabricApi.getConfig().then((cfg) => {
@@ -39,6 +49,9 @@ export default function SettingsPage() {
       setFabricModel(cfg.model);
       setFabricOllama(cfg.ollamaUrl);
     }).catch(() => {});
+
+    fabricApi.getPatterns().then(setAllPatterns).catch(() => {});
+    fabricApi.getEnabledPatterns().then((p) => setEnabledPatterns(p.length > 0 ? p : null)).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -138,12 +151,71 @@ export default function SettingsPage() {
     }
   };
 
+  const handleUpdatePatterns = async () => {
+    setUpdating(true);
+    setUpdateMsg('');
+    try {
+      const result = await fabricApi.updatePatterns();
+      setUpdateMsg(`Done — ${result.added} added, ${result.updated} updated (${result.total} total).`);
+      const fresh = await fabricApi.getPatterns();
+      setAllPatterns(fresh);
+    } catch (err: unknown) {
+      setUpdateMsg((err as { message?: string }).message ?? 'Update failed.');
+    } finally {
+      setUpdating(false);
+      setTimeout(() => setUpdateMsg(''), 6000);
+    }
+  };
+
+  const handleSavePatterns = async () => {
+    setPatternSaving(true);
+    setPatternSaveMsg('');
+    try {
+      await fabricApi.saveEnabledPatterns(enabledPatterns ?? []);
+      setPatternSaveMsg('Pattern selection saved.');
+    } catch {
+      setPatternSaveMsg('Failed to save selection.');
+    } finally {
+      setPatternSaving(false);
+      setTimeout(() => setPatternSaveMsg(''), 3000);
+    }
+  };
+
+  const togglePattern = (name: string) => {
+    setEnabledPatterns((prev) => {
+      if (prev === null) {
+        // Was showing all — uncheck this one by creating an explicit list without it
+        return allPatterns.filter((p) => p !== name);
+      }
+      return prev.includes(name) ? prev.filter((p) => p !== name) : [...prev, name];
+    });
+  };
+
   if (loading) return <div className="settings-page"><div className="spinner spinner--center" /></div>;
 
   return (
     <div className="settings-page">
+      <div className="settings-wrap">
+        {/* Tab bar */}
+        <div className="settings-tabs">
+          <button
+            className={`settings-tab${settingsTab === 'general' ? ' settings-tab--active' : ''}`}
+            onClick={() => setSettingsTab('general')}
+          >
+            General AI
+          </button>
+          <button
+            className={`settings-tab${settingsTab === 'fabric' ? ' settings-tab--active' : ''}`}
+            onClick={() => setSettingsTab('fabric')}
+          >
+            ⬡ Fabric AI
+          </button>
+        </div>
+
+      {/* ── General AI Settings ──────────────────────────── */}
+      {settingsTab === 'general' && (
       <div className="settings-card">
-        <h1 className="settings-title">AI Settings</h1>
+        <h1 className="settings-title">General AI Settings</h1>
         {loadError && <div className="error-banner">{loadError}</div>}
 
         {/* Provider selector */}
@@ -384,11 +456,13 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+      )}
 
-      {/* ── Fabric Settings ─────────────────────────────── */}
-      <div className="settings-card" style={{ marginTop: '1.5rem' }}>
+      {/* ── Fabric AI Settings ───────────────────────────── */}
+      {settingsTab === 'fabric' && (
+      <div className="settings-card">
         <h1 className="settings-title">
-          ⬡ Fabric AI
+          ⬡ Fabric AI Settings
           {fabricCfg && (
             <span className="settings-hint" style={{ marginLeft: '0.75rem', fontWeight: 400 }}>
               {fabricCfg.patternsFound} patterns found
@@ -464,6 +538,91 @@ export default function SettingsPage() {
             </button>
           </div>
         </div>
+
+        {/* Pattern Management */}
+        <div className="settings-section">
+          <div className="settings-section__label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>
+              Patterns
+              <span className="settings-hint" style={{ marginLeft: '0.5rem', textTransform: 'none', letterSpacing: 0 }}>
+                {enabledPatterns === null
+                  ? `${allPatterns.length} available (all shown)`
+                  : enabledPatterns.length === 0
+                    ? 'none selected'
+                    : `${enabledPatterns.length} of ${allPatterns.length} selected`}
+              </span>
+            </span>
+            <button
+              className="btn btn--secondary btn--sm"
+              onClick={handleUpdatePatterns}
+              disabled={updating}
+            >
+              {updating ? 'Updating…' : '↓ Update from GitHub'}
+            </button>
+          </div>
+
+          {updateMsg && (
+            <div className="settings-hint" style={{ color: updateMsg.startsWith('Done') ? 'inherit' : '#b91c1c' }}>
+              {updateMsg}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <input
+              className="form-input"
+              placeholder="Search patterns…"
+              value={patternSearch}
+              onChange={(e) => setPatternSearch(e.target.value)}
+              style={{ flex: 1 }}
+            />
+            <button
+              className="btn btn--ghost btn--sm"
+              onClick={() => setEnabledPatterns(null)}
+            >
+              All
+            </button>
+            <button
+              className="btn btn--ghost btn--sm"
+              onClick={() => setEnabledPatterns([])}
+            >
+              None
+            </button>
+          </div>
+
+          <div className="pattern-list">
+            {allPatterns
+              .filter((p) => p.toLowerCase().includes(patternSearch.toLowerCase()))
+              .map((p) => (
+                <label key={p} className="pattern-list__item">
+                  <input
+                    type="checkbox"
+                    checked={enabledPatterns === null || enabledPatterns.includes(p)}
+                    onChange={() => togglePattern(p)}
+                  />
+                  <span>{p}</span>
+                </label>
+              ))}
+            {allPatterns.length === 0 && (
+              <span className="settings-hint">No patterns found locally.</span>
+            )}
+          </div>
+
+          <div className="settings-actions" style={{ marginTop: 0 }}>
+            <div />
+            <div className="settings-actions__right">
+              {patternSaveMsg && <span className="settings-save-msg">{patternSaveMsg}</span>}
+              <button
+                className="btn btn--primary btn--sm"
+                onClick={handleSavePatterns}
+                disabled={patternSaving}
+              >
+                {patternSaving ? 'Saving…' : 'Save Selection'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      )}
       </div>
     </div>
   );

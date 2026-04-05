@@ -6,19 +6,26 @@ interface Props {
 }
 
 export default function FabricPanel({ videoId }: Props) {
-  const [patterns,    setPatterns]    = useState<string[]>([]);
-  const [search,      setSearch]      = useState('');
-  const [selected,    setSelected]    = useState('');
-  const [open,        setOpen]        = useState(false);
-  const [inputType,   setInputType]   = useState<'transcript' | 'notes'>('transcript');
-  const [output,      setOutput]      = useState('');
-  const [loading,     setLoading]     = useState(false);
-  const [error,       setError]       = useState('');
-  const abortRef = useRef<AbortController | null>(null);
+  const [visiblePatterns, setVisiblePatterns] = useState<string[]>([]);
+  const [search,          setSearch]          = useState('');
+  const [selected,        setSelected]        = useState('');
+  const [open,            setOpen]            = useState(false);
+  const [inputType,       setInputType]       = useState<'transcript' | 'notes'>('transcript');
+  const [output,          setOutput]          = useState('');
+  const [loading,         setLoading]         = useState(false);
+  const [error,           setError]           = useState('');
+  const abortRef    = useRef<AbortController | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fabricApi.getPatterns().then(setPatterns).catch(() => setPatterns([]));
+    Promise.all([
+      fabricApi.getPatterns(),
+      fabricApi.getEnabledPatterns(),
+    ]).then(([all, enabled]) => {
+      setVisiblePatterns(enabled.length > 0 ? all.filter((p) => enabled.includes(p)) : all);
+    }).catch(() => {
+      fabricApi.getPatterns().then(setVisiblePatterns).catch(() => {});
+    });
   }, []);
 
   // Close dropdown on outside click
@@ -32,7 +39,7 @@ export default function FabricPanel({ videoId }: Props) {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const filtered = patterns.filter((p) =>
+  const filtered = visiblePatterns.filter((p) =>
     p.toLowerCase().includes(search.toLowerCase()),
   );
 
@@ -70,7 +77,7 @@ export default function FabricPanel({ videoId }: Props) {
         <div className="fabric-dropdown" ref={dropdownRef}>
           <input
             className="form-input"
-            placeholder={patterns.length ? `Search ${patterns.length} patterns…` : 'Loading patterns…'}
+            placeholder={visiblePatterns.length ? `Search ${visiblePatterns.length} patterns…` : 'Loading patterns…'}
             value={search}
             onChange={(e) => { setSearch(e.target.value); setOpen(true); setSelected(''); }}
             onFocus={() => setOpen(true)}

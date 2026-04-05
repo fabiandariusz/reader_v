@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import pool from '../db/pool';
+import { encrypt, SENSITIVE_KEYS } from '../utils/crypto';
 import { loadSettings } from '../ai/factory';
 import { loadTranscriptionSettings } from '../transcription/factory';
 import { ClaudeProvider } from '../ai/claude';
@@ -38,11 +39,12 @@ export async function updateSettings(req: Request, res: Response, next: NextFunc
 
     for (const [key, value] of Object.entries(body)) {
       if (!allowed.includes(key)) continue;
+      const stored = SENSITIVE_KEYS.has(key) && value ? encrypt(value) : (value ?? '');
       await pool.query(
         `INSERT INTO settings (key, value, updated_at)
          VALUES ($1, $2, NOW())
          ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()`,
-        [key, value ?? '']
+        [key, stored]
       );
     }
 

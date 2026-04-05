@@ -5,6 +5,7 @@ import {
   readFabricEnv,
   writeFabricEnv,
   runPattern,
+  updatePatternsFromGitHub,
 } from '../services/fabricService';
 
 const VENDOR_KEY: Record<string, string> = {
@@ -55,6 +56,44 @@ export function saveConfig(req: Request, res: Response) {
 
   writeFabricEnv(updates);
   res.json({ ok: true });
+}
+
+/** GET /api/fabric/patterns/enabled */
+export async function getEnabledPatterns(_req: Request, res: Response) {
+  try {
+    const { rows } = await pool.query<{ value: string }>(
+      "SELECT value FROM settings WHERE key = 'fabric_enabled_patterns'",
+    );
+    if (!rows[0]?.value) return res.json([]);
+    res.json(JSON.parse(rows[0].value));
+  } catch {
+    res.json([]);
+  }
+}
+
+/** PUT /api/fabric/patterns/enabled */
+export async function saveEnabledPatterns(req: Request, res: Response) {
+  try {
+    const patterns = req.body as string[];
+    await pool.query(
+      `INSERT INTO settings (key, value) VALUES ('fabric_enabled_patterns', $1)
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+      [JSON.stringify(patterns)],
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ message: (err as Error).message });
+  }
+}
+
+/** POST /api/fabric/patterns/update */
+export async function updatePatterns(_req: Request, res: Response, next: NextFunction) {
+  try {
+    const result = await updatePatternsFromGitHub();
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    next(err);
+  }
 }
 
 /** POST /api/fabric/run — SSE stream */

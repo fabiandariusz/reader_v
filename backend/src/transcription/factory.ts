@@ -1,4 +1,5 @@
 import pool from '../db/pool';
+import { decrypt } from '../utils/crypto';
 import { WhisperProvider }       from './whisper';
 import { AssemblyAIProvider }    from './assemblyai';
 import { OpenAIWhisperProvider } from './openaiWhisper';
@@ -11,9 +12,9 @@ export async function loadTranscriptionSettings(): Promise<TranscriptionSettings
   const map = Object.fromEntries(rows.map((r) => [r.key, r.value ?? '']));
   return {
     provider:         (map.transcription_provider as TranscriptionSettings['provider']) ?? 'whisper',
-    whisperModel:     map.whisper_model      ?? 'base',
-    assemblyaiApiKey: map.assemblyai_api_key ?? '',
-    openaiApiKey:     map.openai_api_key     ?? '',
+    whisperModel:     map.whisper_model               ?? 'base',
+    assemblyaiApiKey: decrypt(map.assemblyai_api_key  ?? ''),
+    openaiApiKey:     decrypt(map.openai_api_key      ?? ''),
   };
 }
 

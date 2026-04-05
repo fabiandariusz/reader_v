@@ -1,4 +1,5 @@
 import pool from '../db/pool';
+import { decrypt } from '../utils/crypto';
 import { ClaudeProvider } from './claude';
 import { OllamaProvider } from './ollama';
 import { OpenAIProvider } from './openai';
@@ -12,13 +13,13 @@ export async function loadSettings(): Promise<AISettings> {
   const map = Object.fromEntries(rows.map((r) => [r.key, r.value ?? '']));
   return {
     provider:      (map.ai_provider as AISettings['provider']) ?? 'claude',
-    claudeApiKey:  map.claude_api_key  ?? '',
+    claudeApiKey:  decrypt(map.claude_api_key  ?? ''),
     claudeModel:   map.claude_model    ?? 'claude-opus-4-6',
     ollamaBaseUrl: map.ollama_base_url ?? 'http://localhost:11434',
     ollamaModel:   map.ollama_model    ?? 'llama3.2',
-    openaiApiKey:  map.openai_api_key  ?? '',
+    openaiApiKey:  decrypt(map.openai_api_key  ?? ''),
     openaiModel:   map.openai_model    ?? 'gpt-4o',
-    geminiApiKey:  map.gemini_api_key  ?? '',
+    geminiApiKey:  decrypt(map.gemini_api_key  ?? ''),
     geminiModel:   map.gemini_model    ?? 'gemini-2.0-flash',
   };
 }

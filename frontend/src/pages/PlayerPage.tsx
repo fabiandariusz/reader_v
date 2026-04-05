@@ -46,13 +46,22 @@ export default function PlayerPage() {
   const [exportOpen,       setExportOpen]       = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(340);
   const [player,       setPlayer]       = useState<Player | null>(null);
-  const playerRef  = useRef<Player | null>(null);
-  const sidebarRef = useRef<HTMLElement>(null);
+  const playerRef      = useRef<Player | null>(null);
+  const sidebarRef     = useRef<HTMLElement>(null);
+  const metaPanelRef   = useRef<HTMLDivElement>(null);
+  const dragOverlayRef = useRef<HTMLDivElement>(null);
+
+  // Sidebar (horizontal) drag
   const dragging   = useRef(false);
   const dragStartX = useRef(0);
   const dragStartW = useRef(340);
 
-  // Resize handle — direct DOM updates during drag to avoid re-renders
+  // Meta panel (vertical) drag
+  const hDragging    = useRef(false);
+  const hDragStartY  = useRef(0);
+  const hDragStartH  = useRef(140);
+
+  // Sidebar resize handle
   const onDividerMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     dragging.current   = true;
@@ -60,21 +69,46 @@ export default function PlayerPage() {
     dragStartW.current = sidebarRef.current?.offsetWidth ?? 340;
     document.body.style.cursor     = 'col-resize';
     document.body.style.userSelect = 'none';
+    if (dragOverlayRef.current) dragOverlayRef.current.style.display = 'block';
+  }, []);
+
+  // Meta panel resize handle
+  const onHDividerMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    hDragging.current   = true;
+    hDragStartY.current = e.clientY;
+    hDragStartH.current = metaPanelRef.current?.offsetHeight ?? 140;
+    document.body.style.cursor     = 'row-resize';
+    document.body.style.userSelect = 'none';
+    if (dragOverlayRef.current) dragOverlayRef.current.style.display = 'block';
   }, []);
 
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
-      if (!dragging.current || !sidebarRef.current) return;
-      const w = Math.min(600, Math.max(240, dragStartW.current + (dragStartX.current - e.clientX)));
-      sidebarRef.current.style.width    = `${w}px`;
-      sidebarRef.current.style.minWidth = `${w}px`;
+      if (dragging.current && sidebarRef.current) {
+        const w = Math.min(600, Math.max(240, dragStartW.current + (dragStartX.current - e.clientX)));
+        sidebarRef.current.style.width    = `${w}px`;
+        sidebarRef.current.style.minWidth = `${w}px`;
+      }
+      if (hDragging.current && metaPanelRef.current) {
+        const h = Math.min(380, Math.max(60, hDragStartH.current + (hDragStartY.current - e.clientY)));
+        metaPanelRef.current.style.height = `${h}px`;
+      }
     };
     const onUp = () => {
-      if (!dragging.current) return;
-      dragging.current = false;
-      document.body.style.cursor     = '';
-      document.body.style.userSelect = '';
-      if (sidebarRef.current) setSidebarWidth(sidebarRef.current.offsetWidth);
+      const wasDragging = dragging.current || hDragging.current;
+      if (dragging.current) {
+        dragging.current = false;
+        if (sidebarRef.current) setSidebarWidth(sidebarRef.current.offsetWidth);
+      }
+      if (hDragging.current) {
+        hDragging.current = false;
+      }
+      if (wasDragging) {
+        document.body.style.cursor     = '';
+        document.body.style.userSelect = '';
+        if (dragOverlayRef.current) dragOverlayRef.current.style.display = 'none';
+      }
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup',   onUp);
@@ -149,6 +183,9 @@ export default function PlayerPage() {
 
   return (
     <div className="player-layout">
+      {/* Transparent overlay — blocks video/iframe from stealing mouse events during any drag */}
+      <div ref={dragOverlayRef} style={{ display: 'none', position: 'fixed', inset: 0, zIndex: 9999 }} />
+
       {/* Left — video + meta */}
       <div className="player-main">
         <VideoPlayer
@@ -157,7 +194,9 @@ export default function PlayerPage() {
           onPlayerReady={handlePlayerReady}
         />
         <VideoControls player={player} />
-        <div className="player-meta">
+        {/* Horizontal resize handle */}
+        <div className="panel-divider panel-divider--h" onMouseDown={onHDividerMouseDown} />
+        <div className="player-meta" ref={metaPanelRef} style={{ height: 140 }}>
           <button
             className="btn btn--ghost btn--sm"
             style={{ marginBottom: '0.5rem', paddingLeft: 0 }}
