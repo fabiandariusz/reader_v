@@ -31,6 +31,9 @@ An educational video learning app with timestamped note-taking. Watch videos and
 | Full-text search across notes | Done |
 | Video controls (skip ±10s, playback speed, resizable panel) | Done |
 | Fabric AI pattern integration (217 patterns, searchable) | Done |
+| Fabric pattern management (select, update from GitHub) | Done |
+| API key encryption at rest (AES-256-GCM) | Done |
+| Settings page horizontal sub-tabs | Done |
 | Unit tests (Jest + Vitest) | Done |
 
 ---
@@ -139,9 +142,10 @@ reader_v/
 cd frontend && npm install
 cd ../backend && npm install
 
-# 2. Configure environment
-cp .env.example backend/.env
-# Edit backend/.env with your Postgres credentials
+# 2. Create backend/.env and generate your encryption key
+cp backend/.env.example backend/.env
+echo "ENCRYPTION_KEY=$(openssl rand -hex 32)" >> backend/.env
+# Add your Postgres credentials to backend/.env if they differ from the defaults
 
 # 3. Initialise database
 cd backend && npm run db:init
@@ -156,8 +160,32 @@ npm test
 
 ### Environment Variables
 
+Create `backend/.env` (this file is gitignored and never committed):
+
+```
+# Required — encryption key for API keys stored in the database
+ENCRYPTION_KEY=your_key_here
+
+# Optional — Postgres connection (defaults shown)
+PGHOST=localhost
+PGPORT=5432
+PGDATABASE=reader_v
+PGUSER=postgres
+PGPASSWORD=
+
+# Optional — Redis connection (defaults shown)
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+# Optional — backend port (default: 3001)
+PORT=3001
+```
+
+A template is included at `backend/.env.example`.
+
 | Variable | Default | Description |
 |---|---|---|
+| `ENCRYPTION_KEY` | _(required)_ | 32-byte hex key used to encrypt API keys at rest |
 | `PGHOST` | `localhost` | Postgres host |
 | `PGPORT` | `5432` | Postgres port |
 | `PGDATABASE` | `reader_v` | Database name |
@@ -169,7 +197,58 @@ npm test
 
 ---
 
+### Encryption Key — Step by Step
+
+Reader V stores your AI API keys (Claude, OpenAI, Gemini, AssemblyAI) in PostgreSQL. To protect them if your database is ever exposed, keys are encrypted using AES-256-GCM before being saved. The encryption key lives only on your machine in `backend/.env` and is never committed to git.
+
+**First time setup — generate your key:**
+
+```bash
+# macOS / Linux
+openssl rand -hex 32
+```
+
+This prints a 64-character string like:
+```
+7c24c7820bd52a64435ccaa5dd42040ba52a17a54324546322098f533848c086
+```
+
+Copy it into `backend/.env`:
+
+```
+ENCRYPTION_KEY=7c24c7820bd52a64435ccaa5dd42040ba52a17a54324546322098f533848c086
+```
+
+That's it. The app loads this automatically on startup.
+
+**What happens if I already have API keys saved?**
+
+No action needed. When the backend starts, it automatically detects any plain-text keys in the database and re-encrypts them. You will not lose any data.
+
+**What happens if I lose the key?**
+
+You will need to re-enter your API keys in the Settings page — the encrypted values in the database can no longer be decrypted without the original key. Your videos, notes, and transcripts are unaffected (they are not encrypted).
+
+**Keep your key safe:**
+
+- Do not commit `backend/.env` to git (it is already gitignored)
+- Back it up somewhere secure (password manager, encrypted notes)
+- If you move to a new machine, copy the same `backend/.env` across so your saved keys remain readable
+
+---
+
 ## Development Log
+
+### 2026-04-06 — Security, Fabric pattern management, and UI improvements
+
+- API keys (Claude, OpenAI, Gemini, AssemblyAI) are now encrypted at rest using AES-256-GCM before being stored in PostgreSQL — a DB dump no longer exposes raw keys
+- `ENCRYPTION_KEY` lives in `backend/.env` (gitignored) — two separate attack vectors required to compromise keys
+- Startup migration automatically re-encrypts any existing plain-text keys on first boot
+- Fabric AI settings: pattern list with checkboxes, search filter, All/None selection, Save Selection
+- Update patterns from GitHub: fetches latest patterns from `danielmiessler/fabric` directly into `~/.config/fabric/patterns/`
+- Settings page split into horizontal sub-tabs: General AI and Fabric AI
+- Sidebar resize now stays smooth when a video is loaded (transparent drag overlay blocks the video element from capturing mouse events)
+- Horizontal resize handle added between the video controls bar and the video metadata/transcribe area
 
 ### 2026-03-29 — Fabric AI integration
 
